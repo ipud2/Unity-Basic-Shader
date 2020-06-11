@@ -57,6 +57,10 @@ Shader "Unlit/Basic"
                 float3 N = i.normal;
                 float3 L = WorldSpaceLightDir(float4(i.worldPosion.xyz,1));
                 float3 V = WorldSpaceViewDir(float4( i.worldPosion.xyz,1));
+                float3 H = normalize(L+V);
+                float NV = dot(N,V);
+                float NH = dot(N,H);
+                float NL = dot(N,L);
                 float2 uv = i.uv;
                 
 
