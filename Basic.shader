@@ -56,8 +56,8 @@ Shader "Unlit/Basic"
             {
                 float3 T = normalize(cross(i.normal ,i.tangent));
                 float3 N = i.normal;
-                float3 L = WorldSpaceLightDir(float4(i.worldPosion.xyz,1));
-                float3 V = WorldSpaceViewDir(float4( i.worldPosion.xyz,1));
+                float3 L = normalize(_WorldSpaceLightPos0 );
+                float3 V =normalize(_WorldSpaceCameraPos.xyz-i.worldPosion.xyz);
                 float3 H = normalize(L+V);
                 float NV = dot(N,V);
                 float NH = dot(N,H);
