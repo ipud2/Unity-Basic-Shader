@@ -47,6 +47,7 @@ Shader "Unlit/Basic"
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.normal = UnityObjectToWorldNormal(v.normal);
+                o.worldPosion = mul(unity_ObjectToWorld,v.vertex);
                 o.tangent = UnityObjectToWorldDir(v.tangent);
                 return o;
             }
