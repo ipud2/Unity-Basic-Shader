@@ -60,11 +60,11 @@ Shader "Unlit/Basic"
                 float3 T = normalize(cross(i.normal ,i.tangent));
                 float3 N = normalize(i.normal);
                 
-                float3 L = UnityWorldSpaceLightDir(float4(i.worldPostion.xyz,1));
-                float3 V = UnityWorldSpaceViewDir(float4( i.worldPostion.xyz,1));
+                float3 L = normalize( UnityWorldSpaceLightDir(i.worldPosition.xyz));
+                float3 V = normalize( UnityWorldSpaceViewDir(i.worldPosition.xyz));
 
-                // float3 L = WorldSpaceLightDir(float4(i.localSpace.xyz,1));
-                // float3 V = WorldSpaceViewDir(float4( i.localSpace.xyz,1));
+                // float3 L = normalize(WorldSpaceLightDir(float4(i.localSpace.xyz,1)));
+                // float3 V = normalize(WorldSpaceViewDir(float4( i.localSpace.xyz,1)));
 
                 // float3 L = normalize(_WorldSpaceLightPos0 );//获取方向光的方向
                 // float3 L = normalize(_WorldSpaceLightPos0 -i.worldPosition.xyz );//获取非方向光的方向
