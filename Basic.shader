@@ -31,11 +31,12 @@ Shader "Unlit/Basic"
 
             struct v2f
             {
-                float2 uv : TEXCOORD0;
-                float4 vertex : SV_POSITION;
-                float3 worldPosion : TEXCOORD1;
-                float3 tangent : TEXCOORD2;
-                float3 normal :TEXCOORD3; 
+                float4 vertex       : SV_POSITION;
+                float2 uv           : TEXCOORD0;
+                float3 tangent      : TEXCOORD1;
+                float3 normal       : TEXCOORD2; 
+                float3 worldPostion : TEXCOORD3;
+                float3 localPostion  : TEXCOORD4;
             };
 
             sampler2D _MainTex;
@@ -47,17 +48,29 @@ Shader "Unlit/Basic"
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.normal = UnityObjectToWorldNormal(v.normal);
-                o.worldPosion = mul(unity_ObjectToWorld,v.vertex);
+                o.worldPostion = mul(unity_ObjectToWorld,v.vertex);
+                o.localPostion = v.vertex.xyz;
                 o.tangent = UnityObjectToWorldDir(v.tangent);
                 return o;
             }
 
             float4 frag (v2f i) : SV_Target
             {
+               //Variable
                 float3 T = normalize(cross(i.normal ,i.tangent));
-                float3 N = i.normal;
-                float3 L = normalize(_WorldSpaceLightPos0 );
-                float3 V =normalize(_WorldSpaceCameraPos.xyz-i.worldPosion.xyz);
+                float3 N = normalize(i.normal);
+                
+                float3 L = UnityWorldSpaceLightDir(float4(i.worldPostion.xyz,1));
+                float3 V = UnityWorldSpaceViewDir(float4( i.worldPostion.xyz,1));
+
+                // float3 L = WorldSpaceLightDir(float4(i.localSpace.xyz,1));
+                // float3 V = WorldSpaceViewDir(float4( i.localSpace.xyz,1));
+
+                // float3 L = normalize(_WorldSpaceLightPos0 );//获取方向光的方向
+                // float3 L = normalize(_WorldSpaceLightPos0 -i.worldPosition.xyz );//获取非方向光的方向
+
+                // float3 V=normalize(_WorldSpaceCameraPos.xyz-i.worldPosion.xyz);
+                
                 float3 H = normalize(L+V);
                 float NV = dot(N,V);
                 float NH = dot(N,H);
