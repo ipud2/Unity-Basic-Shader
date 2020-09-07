@@ -3,8 +3,9 @@ Shader "Unlit/Basic"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
-        scale ("Value",Float) = 1
-
+        _Value ("_Value",Float) =1
+        _RangeValue("_RangeValue",Range(0,1)) = 0.5
+        _Color ("_Color",Color) = (0.5,0.3,0.2,1)
     }
     SubShader
     {
@@ -35,20 +36,23 @@ Shader "Unlit/Basic"
                 float2 uv           : TEXCOORD0;
                 float3 tangent      : TEXCOORD1;
                 float3 normal       : TEXCOORD2; 
-                float3 worldPostion : TEXCOORD3;
+                float3 worldPosition : TEXCOORD3;
                 float3 localPostion  : TEXCOORD4;
             };
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
 
+            float  _Value,_RangeValue;
+            float4 _Color;
+
             v2f vert (appdata v)
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.uv = v.uv;
                 o.normal = UnityObjectToWorldNormal(v.normal);
-                o.worldPostion = mul(unity_ObjectToWorld,v.vertex);
+                o.worldPosition = mul(unity_ObjectToWorld,v.vertex);
                 o.localPostion = v.vertex.xyz;
                 o.tangent = UnityObjectToWorldDir(v.tangent);
                 return o;
@@ -56,12 +60,15 @@ Shader "Unlit/Basic"
 
             float4 frag (v2f i) : SV_Target
             {
-               //Variable
+                //Variable
                 float3 T = normalize(cross(i.normal ,i.tangent));
                 float3 N = normalize(i.normal);
+                float3 B = cross(N,T);
                 
                 float3 L = normalize( UnityWorldSpaceLightDir(i.worldPosition.xyz));
                 float3 V = normalize( UnityWorldSpaceViewDir(i.worldPosition.xyz));
+                float3 H = normalize(V+L);
+                float2 uv = i.uv;
 
                 // float3 L = normalize(WorldSpaceLightDir(float4(i.localSpace.xyz,1)));
                 // float3 V = normalize(WorldSpaceViewDir(float4( i.localSpace.xyz,1)));
@@ -69,20 +76,13 @@ Shader "Unlit/Basic"
                 // float3 L = normalize(_WorldSpaceLightPos0 );//获取方向光的方向
                 // float3 L = normalize(_WorldSpaceLightPos0 -i.worldPosition.xyz );//获取非方向光的方向
 
-                // float3 V=normalize(_WorldSpaceCameraPos.xyz-i.worldPosion.xyz);
-                
-                float3 H = normalize(L+V);
-                float NV = dot(N,V);
-                float NH = dot(N,H);
-                float NL = dot(N,L);
-                float2 uv = i.uv;
+                // float3 V = normalize(_WorldSpaceCameraPos.xyz-i.worldPosion.xyz);
+
+
+                float4 FinalColor =0;
                 
 
-                // sample the texture
-                // fixed4 col = tex2D(_MainTex, uv);
-
-                return dot(N,L);
-
+                return FinalColor;
             }
             ENDCG
         }
