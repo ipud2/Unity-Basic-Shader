@@ -1,4 +1,4 @@
-Shader "Unlit/PBR_BetterThanUnity"
+Shader "Unlit/MyPBR"
 {
     Properties
     {
@@ -14,11 +14,23 @@ Shader "Unlit/PBR_BetterThanUnity"
 
         _EnvCubeMap("_EnvCubeMap",CUBE) = ""
 
+        [Space]
+        [Space]
+        [Space]
+
+        _BaseColorTex ("_BaseColorTex", 2D) = "white" {}
+        _MetallicTex ("_MetallicTex", 2D) = "white" {}
+        _RoughnessTex ("_RoughnessTex", 2D) = "white" {}
+
+        _EmissionTex ("_EmissionTex", 2D) = "white" {}
+        _NormalTex ("_NormalTex", 2D) = "black" {}
+        _AOTex ("_AOTex", 2D) = "white" {}
+
+
     }
     SubShader
     {
         Tags { "RenderType"="Opaque" "LightMode"="ForwardBase"}
-        LOD 100
 
         Pass
         {
@@ -26,13 +38,16 @@ Shader "Unlit/PBR_BetterThanUnity"
             #pragma vertex vert
             #pragma fragment frag
             // make fog work
-            #pragma multi_compile_fog
+
+            // #include "UnityCG.cginc"
+            // // _LightColor0 (declared in UnityLightingCommon.cginc)
+            // #include "UnityLightingCommon.cginc" 
+            // // #define UNITY_SPECCUBE_LOD_STEPS
+            // #include "UnityStandardConfig.cginc"
 
             #include "UnityCG.cginc"
-            // _LightColor0 (declared in UnityLightingCommon.cginc)
-            #include "UnityLightingCommon.cginc" 
-            // #define UNITY_SPECCUBE_LOD_STEPS
-            #include "UnityStandardConfig.cginc"
+			#include "Lighting.cginc"
+            #include "UnityGlobalIllumination.cginc"
 
             struct appdata
             {
@@ -47,9 +62,10 @@ Shader "Unlit/PBR_BetterThanUnity"
                 float4 vertex       : SV_POSITION;
                 float2 uv           : TEXCOORD0;
                 float3 tangent      : TEXCOORD1;
-                float3 normal       : TEXCOORD2; 
-                float3 worldPosition : TEXCOORD3;
-                float3 localPostion  : TEXCOORD4;
+                float3 bitangent    : TEXCOORD2; 
+                float3 normal       : TEXCOORD3; 
+                float3 worldPosition: TEXCOORD4;
+                float3 localPostion : TEXCOORD5;
             };
 
             sampler2D _MainTex;
@@ -63,34 +79,27 @@ Shader "Unlit/PBR_BetterThanUnity"
 
             samplerCUBE _EnvCubeMap;
 
-            v2f vert (appdata v)
-            {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = v.uv;
-                o.normal = UnityObjectToWorldNormal(v.normal);
-                o.worldPosition = mul(unity_ObjectToWorld,v.vertex);
-                o.localPostion = v.vertex.xyz;
-                o.tangent = UnityObjectToWorldDir(v.tangent);
-                return o;
-            }
+            sampler2D _BaseColorTex,_MetallicTex,_RoughnessTex;
+            sampler2D _EmissionTex,_AOTex,_NormalTex;
 
+         
             #define PI 3.141592654
 
             //D
             float D_DistributionGGX(float3 N,float3 H,float Roughness)
             {
                 float a             = Roughness*Roughness;
+                // float a             = Roughness;
                 float a2            = a*a;
-                float NH            = saturate(dot(N,H));
+                float NH            = max(dot(N,H),0);
                 float NH2           = NH*NH;
                 float nominator     = a2;
-                float denominator   = (NH2*(a2-1.0)+1.0);
+                float denominator   = (NH2 * (a2-1.0) +1.0);
                 denominator         = PI * denominator*denominator;
                 
-                return              nominator/ max(denominator,0.001) ;//防止分母为0
+                return              nominator/ max(denominator,0.0000001) ;//防止分母为0
+                // return              nominator/ (denominator) ;//防止分母为0
             }
-
             //G
             float GeometrySchlickGGX(float NV,float Roughness)
             {
@@ -98,21 +107,14 @@ Shader "Unlit/PBR_BetterThanUnity"
                 float k = r*r / 8.0;
                 float nominator = NV;
                 float denominator = k + (1.0-k) * NV;
-                return nominator/ max(denominator,0.001) ;//防止分母为0
+                // return nominator/ max(denominator,0.001) ;//防止分母为0
+                return              nominator/ max(denominator,0.0000001) ;//防止分母为0
             }
-
-            // float GeometrySchlickGGX(float NV, float k)
-            // {
-            //     float nominator   = NV;
-            //     float denominator = NV * (1.0 - k) + k;
-                
-            //     return nominator/ max(denominator,0.001) ;
-            // }
 
             float G_GeometrySmith(float3 N,float3 V,float3 L,float Roughness)
             {
-                float NV = saturate(dot(N,V));
-                float NL = saturate(dot(N,L));
+                float NV = max(dot(N,V),0);
+                float NL = max(dot(N,L),0);
 
                 float ggx1 = GeometrySchlickGGX(NV,Roughness);
                 float ggx2 = GeometrySchlickGGX(NL,Roughness);
@@ -124,7 +126,7 @@ Shader "Unlit/PBR_BetterThanUnity"
             //F
             float3 F_FrenelSchlick(float HV,float3 F0)
             {
-                return F0 +(1 - F0)*pow(1-HV,5);
+                return F0 +(1.0 - F0)*pow(1.0-HV,5);
             }
 
             float3 FresnelSchlickRoughness(float NV,float3 F0,float Roughness)
@@ -155,8 +157,7 @@ Shader "Unlit/PBR_BetterThanUnity"
             //     float A = t.x * min(t.y, exp2(-9.28 * NV)) + t.z;
             //     float B = t.w;
             //     return float2 ( t.w-A,A);
-            // }
-
+            // }如果
 
             float3 ACESToneMapping(float3 x)
             {
@@ -177,35 +178,67 @@ Shader "Unlit/PBR_BetterThanUnity"
                 return saturate((x*(a*x+b))/(x*(c*x+d)+e));
             }
 
+            v2f vert (appdata v)
+            {
+                v2f o;
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.uv = v.uv;
+                o.normal = UnityObjectToWorldNormal(v.normal);
+                o.worldPosition = mul(unity_ObjectToWorld,v.vertex);
+                o.localPostion = v.vertex.xyz;
+                o.tangent = UnityObjectToWorldDir(v.tangent);
+                o.bitangent = cross(o.normal,o.tangent) * v.tangent.w;
+                return o;
+            }
+
+
             float4 frag (v2f i) : SV_Target
             {
                 //Variable
                 float3 T = normalize(cross(i.normal ,i.tangent));
                 float3 N = normalize(i.normal);
-                float3 B = cross(N,T);
-                
+                float3 B = normalize( cross(N,T));
+                // float3 B = normalize( i.bitangent);
                 float3 L = normalize( UnityWorldSpaceLightDir(i.worldPosition.xyz));
                 float3 V = normalize( UnityWorldSpaceViewDir(i.worldPosition.xyz));
                 float3 H = normalize(V+L);
                 float2 uv = i.uv;
 
 //================== Normal Map  ============================================== //
+                float3 NormalMap = UnpackNormal(tex2D(_NormalTex,uv));
 
+                float3x3 TBN = float3x3(T,B,N);
+                // TBN = transpose(TBN);
+                // N = normalize( mul (TBN,NormalMap) );
+                N = normalize( mul (NormalMap,TBN));
+                // N.x = dot(float3(T.x,B.x,N.x),NormalMap);
+                // N.y = dot(float3(T.y,B.y,N.y),NormalMap);
+                // N.z = dot(float3(T.z,B.z,N.z),NormalMap);
+                N = normalize(N);
 
 //================== PBR  ============================================== //
-                // float3 BaseColor = float3(0.5,0.3,0.2);
-                float3 BaseColor = _BaseColor;
-                float Roughness = _Roughness;
-                float Metallic = _Metallic;
+                // float3 BaseColor = _BaseColor;
+                // float Roughness = _Roughness;
+                // float Metallic = _Metallic;
+
+                float3 BaseColor = tex2D(_BaseColorTex,uv);
+
+                // return BaseColor.xyzz;
+                float Roughness = tex2D(_RoughnessTex,uv).r;
+                float Metallic = tex2D(_MetallicTex,uv).r;
+                
+                float3 Emission = tex2D(_EmissionTex,uv);
+                float3 AO = tex2D(_AOTex,uv);
+
                 float3 F0 = lerp(0.04,BaseColor,Metallic);
                 float3 Radiance = _LightColor0.xyz;
 
 //================== Direct Light  ============================================== //
                 //Specular
                 //Cook-Torrance BRDF
-                float HV = saturate(dot(H,V));
-                float NV = saturate(dot(N,V));
-                float NL = saturate(dot(N,L));
+                float HV = max(dot(H,V),0);
+                float NV = max(dot(N,V),0);
+                float NL = max(dot(N,L),0);
                
                 float D = D_DistributionGGX(N,H,Roughness);
                 float3 F = F_FrenelSchlick(HV,F0);
@@ -217,15 +250,14 @@ Shader "Unlit/PBR_BetterThanUnity"
                 float3 nominator = D*F*G;
                 float denominator = max(4*NV*NL,0.001);
                 float3 Specular = nominator/denominator;
+                // Specular =max( Specular,0);
 
-                
                 //Diffuse
-                float3 Diffuse = KD * BaseColor / PI;
+                // float3 Diffuse = KD * BaseColor / PI;
+                float3 Diffuse = KD * BaseColor ; //没有除以 PI
 
                 float3 DirectLight = (Diffuse + Specular)*NL *Radiance;
-                // float3 DirectLight = G;
-                // return D;
-                // return G;
+    
 
 //================== Indirect Light  ============================================== //
                 float3 IndirectLight = 0;
@@ -233,44 +265,42 @@ Shader "Unlit/PBR_BetterThanUnity"
                 //Specular
                 float3 R = reflect(-V,N);
                 float3 F_IndirectLight = FresnelSchlickRoughness(NV,F0,Roughness);
+                // return F_IndirectLight.xyzz;
                 // float3 F_IndirectLight = F_FrenelSchlick(NV,F0);
-                float mip = Roughness*(1.7 - 0.7*Roughness) * UNITY_SPECCUBE_LOD_STEPS ;
+                float mip = Roughness * (1.7 - 0.7 * Roughness) * UNITY_SPECCUBE_LOD_STEPS ;
                 float4 rgb_mip = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,R,mip);
 
                 //间接光镜面反射采样的预过滤环境贴图
                 float3 EnvSpecularPrefilted = DecodeHDR(rgb_mip, unity_SpecCube0_HDR);
-                
-                // return EnvSpecularPrefilted.xyzz;
-
+               
                 //LUT采样
                 // float2 env_brdf = tex2D(_BRDFLUTTex, float2(NV, Roughness)).rg; //0.356
                 // float2 env_brdf = tex2D(_BRDFLUTTex, float2(lerp(0, 0.99, NV), lerp(0, 0.99, Roughness))).rg;
-
+             
                 //数值近似
                 float2 env_brdf = EnvBRDFApprox(Roughness,NV);
 
                 float3 Specular_Indirect = EnvSpecularPrefilted  * (F_IndirectLight * env_brdf.r + env_brdf.g);
-
-                // return (F_IndirectLight * env_brdf.r + env_brdf.g).xyzz;
-
+            
                 //Diffuse           
-                float3 KD_IndirectLight = 1 - F_IndirectLight;
+                float3 KD_IndirectLight = float3(1,1,1) - F_IndirectLight;
+                // return KD_IndirectLight.xyzz;
                 KD_IndirectLight *= 1 - Metallic;
 
                 float3 irradianceSH = ShadeSH9(float4(N,1));
                 // return irradianceSH.rgbb;
-                float3 Diffuse_Indirect = irradianceSH * BaseColor / PI *KD_IndirectLight;
-                
-                float3 EnvCubeMap = texCUBE(_EnvCubeMap,N).xyz;
-                // return ACESToneMapping(EnvCubeMap.xyzz*3);
-
-                IndirectLight = Diffuse_Indirect + Specular_Indirect;
-
-                // return Diffuse_Indirect.xyzz;
-                // return  ShadeSH9(float4(N,1)).xyzz;
+                // float3 Diffuse_Indirect = irradianceSH * BaseColor *KD_IndirectLight / PI;
+                float3 Diffuse_Indirect = irradianceSH * BaseColor *KD_IndirectLight; //没有除以 PI
+             
+                IndirectLight = (Diffuse_Indirect + Specular_Indirect)*AO;
 
                 float4 FinalColor =0;
+
                 FinalColor.rgb = DirectLight + IndirectLight;
+
+                FinalColor.rgb += Emission;
+
+
                 //HDR => LDR aka ToneMapping
                 // return G;
                 FinalColor.rgb = ACESToneMapping(FinalColor.rgb);
