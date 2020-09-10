@@ -270,7 +270,7 @@ Shader "Unlit/PBR_BetterThanUnity"
                 // return  ShadeSH9(float4(N,1)).xyzz;
 
                 float4 FinalColor =0;
-                FinalColor.rgb = DirectLight + Specular_Indirect;
+                FinalColor.rgb = DirectLight + IndirectLight;
                 //HDR => LDR aka ToneMapping
                 // return G;
                 FinalColor.rgb = ACESToneMapping(FinalColor.rgb);
