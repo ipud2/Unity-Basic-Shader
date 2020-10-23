@@ -104,6 +104,39 @@ Shader "BasicURP"
             }
             ENDHLSL
         }
+        // Used for rendering URP's shadowmaps
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags{"LightMode" = "ShadowCaster"}
+
+            //we don't care about color, we just write to depth
+            ColorMask 0
+
+            HLSLPROGRAM
+
+            #pragma vertex ShadowCasterPassVertex
+            #pragma fragment ShadowCasterPassFragment
+
+            #include "SimpleURPToonLitOutlineExample_Shared.hlsl"
+
+            Varyings ShadowCasterPassVertex(Attributes input)
+            {
+                VertexShaderWorkSetting setting = GetDefaultVertexShaderWorkSetting();
+
+                setting.isOutline = false; //(you can delete this line, this line is just a note) the correct value is false here, else self shadow is not correct
+                setting.applyShadowBiasFixToHClipPos = true;//important for shadow caster pass, else shadow artifact will appear
+
+                return VertexShaderWork(input, setting);
+            }
+
+            half4 ShadowCasterPassFragment(Varyings input) : SV_TARGET
+            {
+                return BaseColorAlphaClipTest(input);
+            }
+
+            ENDHLSL
+        }
         Pass
         {
             Tags{"LightMode" = "DepthOnly"}
