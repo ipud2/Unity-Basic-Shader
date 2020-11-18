@@ -1,4 +1,4 @@
-﻿Shader "Unlit/YuanShen_Face"
+Shader "Unlit/YuanShen_Face"
 {
     Properties
     {
@@ -19,6 +19,9 @@
         _Outline("Thick of Outline",Float) = 0.01
 		_Factor("Factor",range(0,1)) = 0.5
 		_OutColor("OutColor",color) = (0,0,0,0)
+
+        _FaceLightmpOffset ("Face Lightmp Offset", Range(-1, 1)) = 0 //用来和 头发 身体的明暗过渡对齐
+
 
         [KeywordEnum(None,LightMap_R,LightMap_G,LightMap_B,LightMap_A,UV,UV2,VertexColor,BaseColor,BaseColor_A)] _TestMode("_TestMode",Int) = 0
     }
@@ -48,6 +51,7 @@
             float _DiffuseThreshold,_SpecularScale,_SpecularPowerValue;
 
             float _ShadowRange,_ShadowSmooth;
+            float _FaceLightmpOffset;
 
             struct appdata
             {
@@ -149,13 +153,23 @@
                 float halfLambert = 0.5*NL+0.5;
                 float rampValue = smoothstep(0,_ShadowSmooth,halfLambert-_ShadowRange);
                 float3 ramp =  tex2D(_ShadowRamp, float2(saturate(rampValue), 0.5));
-                // ramp*=ramp;
-                // return ramp.xyzz;
-                
-                // return ramp;
 
-                float3 Diffuse = lerp( _ShadowColor*BaseColor,BaseColor,ramp) ;
+                float3 faceLightMap =  tex2D(_LightMap, float2(uv.x,uv.y));
 
+                // return faceLightMap.y;
+                // RTS rotation transform scal
+                float3 _Up    = float3(0,1,0);                          //人物上方向 用代码传进来
+                float3 _Front = float3(0,0,-1);                         //人物前方向 用代码传进来
+                float3 Left = cross(_Up,_Front);
+                float3 Right = -Left;
+                float FL =  dot(normalize(_Front.xz), normalize(L.xz));
+                float LL = dot(normalize(Left.xz), normalize(L.xz));
+                float RL = dot(normalize(Right.xz), normalize(L.xz));
+                float faceLight = faceLightMap.r + _FaceLightmpOffset ; //用来和 头发 身体的明暗过渡对齐
+                float faceLightRamp = (FL > 0) * min((faceLight > LL),(1 > faceLight+RL ) ) ;
+
+                float3 Diffuse = lerp( _ShadowColor*BaseColor,BaseColor,faceLightRamp);
+                // float3 Diffuse = lerp( _ShadowColor*BaseColor,BaseColor,ramp) ;
 /*==========================Spedular ==========================*/
                 float3 Specular =0;
                 // Specular = pow(saturate(NH),_SpecularPowerValue * LightMap.r )*_SpecularScale * LightMap.b ;
