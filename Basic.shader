@@ -10,7 +10,12 @@ Shader "Unlit/Basic"
     SubShader
     {
         Tags { "RenderType"="Opaque" }
-        LOD 100
+        
+        /*
+        //Transparent Setup
+         Tags { "Queue"="Transparent"  "RenderType"="Transparent"}
+         Blend SrcAlpha OneMinusSrcAlpha
+        */
 
         Pass
         {
