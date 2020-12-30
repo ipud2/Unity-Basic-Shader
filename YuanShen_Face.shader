@@ -158,11 +158,19 @@ Shader "Unlit/YuanShen_Face"
 
                 // return faceLightMap.y;
                 // RTS rotation transform scal
-                float3 _Up    = float3(0,1,0);                          //人物上方向 用代码传进来
-                float3 _Front = float3(0,0,-1);                         //人物前方向 用代码传进来
-                float3 Left = cross(_Up,_Front);
-                float3 Right = -Left;
-                float FL =  dot(normalize(_Front.xz), normalize(L.xz));
+                //float3 _Up    = float3(0,1,0);                          //人物上方向 用代码传进来
+                //float3 _Front = float3(0,0,-1);                         //人物前方向 用代码传进来
+                //float3 Left = cross(_Up,_Front);
+                //float3 Right = -Left;
+		
+		//也可以直接从模型的世界矩阵中拿取出 各个方向
+		//这要求模型在制作的时候得使用正确的朝向: X Y Z 分别是模型的 右 上 前
+		float4 Front = mul(unity_ObjectToWorld,float4(0,0,1,0));
+		float4 Right = mul(unity_ObjectToWorld,float4(1,0,0,0));
+		float4 Up = mul(unity_ObjectToWorld,float4(0,1,0,0));
+		float3 Left = -Right;
+		
+                float FL =  dot(normalize(Front.xz), normalize(L.xz));
                 float LL = dot(normalize(Left.xz), normalize(L.xz));
                 float RL = dot(normalize(Right.xz), normalize(L.xz));
                 float faceLight = faceLightMap.r + _FaceLightmpOffset ; //用来和 头发 身体的明暗过渡对齐
