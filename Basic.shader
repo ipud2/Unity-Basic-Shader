@@ -19,77 +19,109 @@ Shader "Unlit/Basic"
 
         Pass
         {
-            CGPROGRAM
+	    CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            // make fog work
-            #pragma multi_compile_fog
-
+            #pragma fullforwardshadows
+            #pragma multi_compile_fwdbase
+            
             #include "UnityCG.cginc"
+	    #include "Lighting.cginc"
+            #include "UnityGlobalIllumination.cginc"
+            #include "AutoLight.cginc"
+            // #include "NPRBrdf.cginc"	
+			
 
-            struct appdata
+			#ifndef UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX
+			//only defining to not throw compilation error over Unity 5.5
+			#define UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input)
+			#endif
+			#pragma vertex vert
+			#pragma fragment frag
+			#pragma multi_compile_instancing
+			#include "UnityCG.cginc"
+
+	    struct appdata
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
+                float2 uv2 : TEXCOORD1;
                 float4 tangent :TANGENT;
                 float3 normal : NORMAL;
+                float4 vertexColor : COLOR;
             };
 
             struct v2f
             {
-                float4 vertex       : SV_POSITION;
-                float2 uv           : TEXCOORD0;
-                float3 tangent      : TEXCOORD1;
-                float3 normal       : TEXCOORD2; 
-                float3 worldPosition : TEXCOORD3;
-                float3 localPostion  : TEXCOORD4;
+                float4 pos              : SV_POSITION; // 必须命名为pos ，因为 TRANSFER_VERTEX_TO_FRAGMENT 是这么命名的，为了正确地获取到Shadow
+                float2 uv               : TEXCOORD0;
+                float3 tangent          : TEXCOORD1;
+                float3 bitangent        : TEXCOORD2; 
+                float3 normal           : TEXCOORD3; 
+                float3 worldPosition    : TEXCOORD4;
+                float3 localPosition    : TEXCOORD5;
+                float3 localNormal      : TEXCOORD6;
+                float4 vertexColor      : TEXCOORD7;
+                float2 uv2              : TEXCOORD8;
+                LIGHTING_COORDS(9,10)
             };
-
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
-
-            float  _Value,_RangeValue;
-            float4 _Color;
 
             v2f vert (appdata v)
             {
                 v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.pos = UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
+                o.uv2 = v.uv2;
                 o.normal = UnityObjectToWorldNormal(v.normal);
                 o.worldPosition = mul(unity_ObjectToWorld,v.vertex);
-                o.localPostion = v.vertex.xyz;
+                o.localPosition = v.vertex.xyz;
                 o.tangent = UnityObjectToWorldDir(v.tangent);
+                o.bitangent = cross(o.normal,o.tangent) * v.tangent.w;
+                o.localNormal = v.normal;
+                o.vertexColor = v.vertexColor;
+                TRANSFER_VERTEX_TO_FRAGMENT(o);
+                
                 return o;
             }
 
-            float4 frag (v2f i) : SV_Target
-            {
-                //Variable
+	     sampler2D _MainTex;			float4 _MainTex_ST;
+
+	     float _BaseLum;
+			
+	     float4 frag (v2f i ) : SV_Target
+	     {
+		/Variable
                 float3 T = normalize(cross(i.normal ,i.tangent));
                 float3 N = normalize(i.normal);
-                float3 B = cross(N,T);
-                
+                float3 B = normalize( cross(N,T));
+                // float3 B = normalize( i.bitangent);
                 float3 L = normalize( UnityWorldSpaceLightDir(i.worldPosition.xyz));
                 float3 V = normalize( UnityWorldSpaceViewDir(i.worldPosition.xyz));
                 float3 H = normalize(V+L);
                 float2 uv = i.uv;
+                float2 uv2 = i.uv2;
 
-                // float3 L = normalize(WorldSpaceLightDir(float4(i.localSpace.xyz,1)));
-                // float3 V = normalize(WorldSpaceViewDir(float4( i.localSpace.xyz,1)));
+                // return float4(uv2,0,0);
+                float4 vertexColor = i.vertexColor;
+                // return vertexColor.xyzz;
+                float HV = dot(H,V);
+                float NV = dot(N,V);
+                float NL = dot(N,L);
+                float NH = dot(N,H);
 
-                // float3 L = normalize(_WorldSpaceLightPos0 );//获取方向光的方向
-                // float3 L = normalize(_WorldSpaceLightPos0 -i.worldPosition.xyz );//获取非方向光的方向
+		float4 BaseColor = tex2D(_MainTex,uv);
+		float4 FinalColor =0;
+                FinalColor.rgb = BaseColor.rgb;
 
-                // float3 V = normalize(_WorldSpaceCameraPos.xyz-i.worldPosion.xyz);
+                float shadow = SHADOW_ATTENUATION(i);
+                float2 lightmapUV = uv2 * unity_LightmapST.xy + unity_LightmapST.zw;
+                float3 LightMap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap,lightmapUV));
+                float3 IrradianceSH = ShadeSH9(float4(N,1));
 
+		return FinalColor;
 
-                float4 FinalColor =0;
-                
-
-                return FinalColor;
-            }
-            ENDCG
-        }
+	    }
+	    ENDCG
+	}
     }
 }
