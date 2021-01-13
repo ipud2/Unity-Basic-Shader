@@ -32,14 +32,14 @@ Shader "Unlit/Basic"
             // #include "NPRBrdf.cginc"	
 			
 
-			#ifndef UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX
-			//only defining to not throw compilation error over Unity 5.5
-			#define UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input)
-			#endif
-			#pragma vertex vert
-			#pragma fragment frag
-			#pragma multi_compile_instancing
-			#include "UnityCG.cginc"
+	   #ifndef UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX
+	   //only defining to not throw compilation error over Unity 5.5
+	   #define UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input)
+	   #endif
+	   #pragma vertex vert
+	   #pragma fragment frag
+	   #pragma multi_compile_instancing
+	   #include "UnityCG.cginc"
 
 	    struct appdata
             {
