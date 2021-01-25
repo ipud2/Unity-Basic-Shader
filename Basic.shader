@@ -9,7 +9,7 @@ Shader "Unlit/Basic"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" "LightMode"="ForwardBase" }
+        Tags { "RenderType"="Opaque" "LightMode"="ForwardBase" }//"LightMode"="ForwardBase" ForwardBase 让Shader接受主光源影响
         
         /*
         //Transparent Setup
