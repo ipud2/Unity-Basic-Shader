@@ -9,7 +9,8 @@ Shader "Unlit/Basic"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" "LightMode"="ForwardBase" }//"LightMode"="ForwardBase" ForwardBase 让Shader接受主光源影响
+        Tags { "RenderType"="Opaque" "LightMode"="ForwardBase" "Queue" = "Geometry"}
+//"LightMode"="ForwardBase" ForwardBase 让Shader接受主光源影响
         
         /*
         //Transparent Setup
@@ -86,7 +87,7 @@ Shader "Unlit/Basic"
 
 	     sampler2D _MainTex;			float4 _MainTex_ST;
 
-	     float _BaseLum;
+	   
 			
 	     float4 frag (v2f i ) : SV_Target
 	     {
@@ -108,9 +109,9 @@ Shader "Unlit/Basic"
                 float NV = dot(N,V);
                 float NL = dot(N,L);
                 float NH = dot(N,H);
-
-		float4 BaseColor = tex2D(_MainTex,uv);
+		
 		float4 FinalColor =0;
+		float4 BaseColor = tex2D(_MainTex,uv);
                 FinalColor.rgb = BaseColor.rgb;
 
                 float shadow = SHADOW_ATTENUATION(i);
@@ -124,4 +125,5 @@ Shader "Unlit/Basic"
 	    ENDCG
 	}
     }
+    Fallback "Diffuse"
 }
