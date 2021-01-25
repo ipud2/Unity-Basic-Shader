@@ -9,11 +9,11 @@ Shader "Unlit/Basic"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque" "LightMode"="ForwardBase" }
         
         /*
         //Transparent Setup
-         Tags { "Queue"="Transparent"  "RenderType"="Transparent"}
+         Tags { "Queue"="Transparent"  "RenderType"="Transparent" "LightMode"="ForwardBase"}
          Blend SrcAlpha OneMinusSrcAlpha
         */
 
@@ -90,7 +90,7 @@ Shader "Unlit/Basic"
 			
 	     float4 frag (v2f i ) : SV_Target
 	     {
-		/Variable
+		
                 float3 T = normalize(cross(i.normal ,i.tangent));
                 float3 N = normalize(i.normal);
                 float3 B = normalize( cross(N,T));
