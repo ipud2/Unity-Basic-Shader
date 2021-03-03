@@ -92,10 +92,10 @@ Shader "Unlit/Basic"
 	     float4 frag (v2f i ) : SV_Target
 	     {
 		
-                float3 T = normalize(cross(i.normal ,i.tangent));
+                float3 T = normalize(i.tangent);
                 float3 N = normalize(i.normal);
-                float3 B = normalize( cross(N,T));
-                // float3 B = normalize( i.bitangent);
+                //float3 B = normalize( cross(N,T));
+                float3 B = normalize( i.bitangent);
                 float3 L = normalize( UnityWorldSpaceLightDir(i.worldPosition.xyz));
                 float3 V = normalize( UnityWorldSpaceViewDir(i.worldPosition.xyz));
                 float3 H = normalize(V+L);
