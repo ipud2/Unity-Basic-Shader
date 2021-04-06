@@ -37,8 +37,8 @@ Shader "Unlit/Basic"
 
 
             #ifndef UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX
-       //only defining to not throw compilation error over Unity 5.5
-       #define UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input)
+            //only defining to not throw compilation error over Unity 5.5
+            #define UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input)
             #endif
             #pragma vertex vert
             #pragma fragment frag
