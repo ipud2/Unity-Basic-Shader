@@ -1,11 +1,7 @@
-#ifndef GODPBRBRDF
-#define GODPBRBRDF
+#ifndef PBRBRDF
+#define PBRBRDF
 
 #define PI 3.141592654
-
-
-//ClearCoat
-float _ClearCoat, _RoughnessClearCoat;
 
 //D
 float D_DistributionGGX(float3 N, float3 H, float Roughness)
@@ -129,6 +125,7 @@ struct Vertex2Fragment
     float3 bitangent : TEXCOORD2;
     float3 normal : TEXCOORD3;
     float3 worldPosition: TEXCOORD4;
+    float3 localPostion : TEXCOORD5;
 };
 
 Vertex2Fragment vert(MeshData v)
@@ -138,6 +135,7 @@ Vertex2Fragment vert(MeshData v)
     o.uv = v.uv;
     o.normal = UnityObjectToWorldNormal(v.normal);
     o.worldPosition = mul(unity_ObjectToWorld, v.vertex);
+    o.localPostion = v.vertex.xyz;
     o.tangent = UnityObjectToWorldDir(v.tangent);
     //o.bitangent = cross(o.normal,o.tangent) * v.tangent.w;
     return o;
@@ -231,15 +229,7 @@ float4 GodPBR(in Vertex2Fragment i,in SurfaceOutputStandard o)
     // F_ClearCoat = max(0,F_ClearCoat);
     // G_CleatCoat = max(0,G_CleatCoat);   
     // float Specular_ClearCoat = D_CleatCoat*G_CleatCoat*F_ClearCoat/ max(4*NV*NL,0.001);
-
-    float F_ClearCoat = F_FrenelSchlick(HV, 0.04) * _ClearCoat;
-    float3 Specular_ClearCoat = Specular_GGX(N, L, H, V, NV, NL, HV, _RoughnessClearCoat, 0.04) * _ClearCoat;
-    //保证能量守恒
-    DirectLight = DirectLight * (1 - F_ClearCoat) + Specular_ClearCoat;
-    // return DirectLight.xyzz;
-    // return (Diffuse + Specular).xyzz;
-    // return FinalColor;
-
+  
     //================== Indirect Light  ============================================== //
     float3 IndirectLight = 0;
 
@@ -273,13 +263,6 @@ float4 GodPBR(in Vertex2Fragment i,in SurfaceOutputStandard o)
     float3 Diffuse_Indirect = irradianceSH * BaseColor * KD_IndirectLight; //没有除以 PI
 
     IndirectLight = (Diffuse_Indirect + Specular_Indirect) * AO;
-
-    float3 Specular_Indirect_ClearCoat = SpecularIndirect(N, V, _RoughnessClearCoat, 0.04) * _ClearCoat;
-    float3 F_IndirectLight_ClearCoat = FresnelSchlickRoughness(NV, 0.04, _RoughnessClearCoat) * _ClearCoat;
-    // return Specular_Indirect_ClearCoat.xyzz;
-
-    // FinalColor.rgb += IndirectLight*(1-F_IndirectLight_ClearCoat) + Specular_Indirect_ClearCoat;
-    IndirectLight = IndirectLight * (1 - F_IndirectLight_ClearCoat) + Specular_Indirect_ClearCoat;
 
     FinalColor.rgb = DirectLight + IndirectLight;
     FinalColor.rgb += Emission;
