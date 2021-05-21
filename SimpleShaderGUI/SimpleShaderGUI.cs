@@ -292,7 +292,7 @@ namespace TA
                 prop.floatValue = result ? 1.0f : 0.0f;
                 Func.SetShaderKeyWord(editor.targets, Func.GetKeyWord(keyWord, prop.name), result);
             }
-            else// 有时会出现toggle激活key却未激活的情况
+            else
             {
                 if (!prop.hasMixedValue)
                     Func.SetShaderKeyWord(editor.targets, Func.GetKeyWord(keyWord, prop.name), result);
@@ -514,6 +514,85 @@ namespace TA
             editor.DefaultShaderProperty(prop, label.text);
         }
     }
+     
+    /// <summary>
+    /// 在折叠组内以默认形式绘制属性
+    /// group：父折叠组的group "_" 为没有组
+    /// </summary>
+    public class SubToggleItemDrawer : MaterialPropertyDrawer
+    {
+        public static readonly int propRight = 80;
+        public static readonly int propHeight = 20;
+        protected string group = "";
+        protected string key = "";
+        protected float height;
+        // protected bool needShow => Func.NeedShow(group+key);
+        protected bool needShow
+        {
+            get
+            {
+                if (group == "" || group == "_")
+                    return GUIData.keyWord.ContainsKey(key) && GUIData.keyWord[key];
+                else
+                {
+                    return Func.NeedShow(group, key);
+                }
+            }
+        }
+
+        protected virtual bool matchPropType => true;
+        protected MaterialProperty prop;
+        protected MaterialProperty[] props;
+        
+        public SubToggleItemDrawer(string group,string key)
+        {
+            this.group = group;
+            this.key = key.ToUpperInvariant();
+        }
+
+        public override void OnGUI(Rect position, MaterialProperty prop, GUIContent label, MaterialEditor editor)
+        {
+            height = position.height;
+            this.prop = prop;
+            props = Func.GetProperties(editor);
+            // if (group != "" && group != "_")
+            {
+                EditorGUI.indentLevel++;
+                if (needShow)
+                {
+                    if (matchPropType)
+                        DrawProp(position, prop, label, editor);
+                    else
+                    {
+                        Debug.LogWarning($"{this.GetType()} does not support this MaterialProperty type:'{prop.type}'!");
+                        editor.DefaultShaderProperty(prop, label.text);
+                    }
+                }
+                EditorGUI.indentLevel--;
+            }
+            // else
+            // {
+            //     if (matchPropType)
+            //         DrawProp(position, prop, label, editor);
+            //     else
+            //     {
+            //         Debug.LogWarning($"{this.GetType()} does not support this MaterialProperty type:'{prop.type}'!");
+            //         editor.DefaultShaderProperty(prop, label.text);
+            //     }
+            // }
+            
+        }
+        public override float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
+        {
+            return needShow ? height : -2;
+        }
+        // 绘制自定义样式属性
+        public virtual void DrawProp(Rect position, MaterialProperty prop, GUIContent label, MaterialEditor editor)
+        {
+            editor.DefaultShaderProperty(prop, label.text);
+        }
+    }
+     
      
      /// <summary>
     /// k为对应KeyWord，float值为当前激活的数组index , group：父折叠组的group "_" 为没有组
