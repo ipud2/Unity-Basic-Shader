@@ -319,7 +319,7 @@ namespace TA
         public static readonly int propHeight = 20;
         protected string group = "";
         protected float height;
-        protected bool needShow => Func.NeedShow(group);
+        protected virtual bool needShow => Func.NeedShow(group);
         protected virtual bool matchPropType => true;
         protected MaterialProperty prop;
         protected MaterialProperty[] props;
@@ -394,6 +394,7 @@ namespace TA
             this.group = group;
             this.key = key;
         }
+        
 
         public override void OnGUI(Rect position, MaterialProperty prop, GUIContent label, MaterialEditor editor)
         {
@@ -671,6 +672,61 @@ namespace TA
                 prop.floatValue = (float)index;
             }
             Func.SetShaderKeyWord(editor.targets, keyWords, index);
+        }
+    }
+     
+      /// <summary>
+    /// k为对应KeyWord，float值为当前激活的数组index
+    /// </summary>
+    public class SubToggleEnumDrawer : SubDrawer
+    {
+        #region 
+        public SubToggleEnumDrawer(string group,string key, string k1) : this(group,key,  new string[1] { k1 }) { }
+        public SubToggleEnumDrawer(string group,string key, string k1,  string k2) : this(group,key,  new string[2] { k1, k2 }) { }
+        public SubToggleEnumDrawer(string group,string key,  string k1,  string k2,  string k3) : this(group,key,  new string[3] { k1, k2, k3 }) { }
+        public SubToggleEnumDrawer(string group,string key,  string k1,  string k2,  string k3, string k4) : this(group,key,  new string[4] { k1, k2, k3, k4 }) { }
+        public SubToggleEnumDrawer(string group,string key, string k1, string k2,  string k3,  string k4, string k5) : this(group,key,  new string[5] { k1, k2, k3, k4, k5 }) { }
+        public SubToggleEnumDrawer(string group,string key,  string[] keyWords)
+        {
+            this.group = group;
+            this.toggleKey = key;
+            this.names = new string[keyWords.Length];
+            for (int i = 0; i < keyWords.Length; i++)
+            {
+                this.names[i] = keyWords[i];
+                keyWords[i] = key.ToUpperInvariant() + keyWords[i].ToUpperInvariant();
+                if (!GUIData.keyWord.ContainsKey(keyWords[i]))
+                {
+                    GUIData.keyWord.Add(keyWords[i], false);
+                }
+            }
+            this.keyWords = keyWords;
+            this.values = new int[keyWords.Length];
+            for (int index = 0; index < keyWords.Length; ++index)
+                this.values[index] = index;
+        }
+        #endregion
+        
+        protected override bool needShow => Func.NeedShow(group,toggleKey);
+        
+        protected override bool matchPropType => prop.type == MaterialProperty.PropType.Float;
+        string[] names, keyWords,displayNames;
+        int[] values;
+        private string toggleKey;
+        public override void DrawProp(Rect position, MaterialProperty prop, GUIContent label, MaterialEditor editor)
+        {
+            var rect = EditorGUILayout.GetControlRect();
+            int index = (int)prop.floatValue;
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.showMixedValue = prop.hasMixedValue;
+            int num = EditorGUI.IntPopup(rect, label.text, index, this.names, this.values);
+            EditorGUI.showMixedValue = false;
+            if (EditorGUI.EndChangeCheck())
+            {
+                prop.floatValue = (float)num;
+            }
+            // Func.SetShaderKeyWord(editor.targets, keyWords, num);//不需要使用keyword
         }
     }
     
