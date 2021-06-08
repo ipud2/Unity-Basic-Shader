@@ -127,7 +127,7 @@ namespace TA
                 value = Func.PowPreserveSign(value, 1f / power);
             }
 
-            EditorGUI.BeginChangeCheck();
+            // EditorGUI.BeginChangeCheck();
 
             var labelWidth = EditorGUIUtility.labelWidth;
             EditorGUIUtility.labelWidth = 0;
