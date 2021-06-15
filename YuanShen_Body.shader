@@ -17,8 +17,8 @@
         _SpecularColor("_SpecularColor",Color) = (1,1,1,1)
         
         _Outline("Thick of Outline",Float) = 0.01
-		_Factor("Factor",range(0,1)) = 0.5
-		_OutColor("OutColor",color) = (0,0,0,0)
+	_Factor("Factor",range(0,1)) = 0.5
+	_OutColor("OutColor",color) = (0,0,0,0)
 
         [KeywordEnum(None,LightMap_R,LightMap_G,LightMap_B,LightMap_A,UV,UV2,VertexColor,BaseColor,BaseColor_A)] _TestMode("_TestMode",Int) = 0
     }
