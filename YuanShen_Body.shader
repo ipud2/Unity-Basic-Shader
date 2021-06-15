@@ -98,7 +98,7 @@
             {
 
                 //Variable
-                float3 T = normalize(cross(i.normal ,i.tangent));
+                float3 T = normalize(i.tangent);
                 float3 N = normalize(i.normal);
                 float3 B = normalize( cross(N,T));
                 // float3 B = normalize( i.bitangent);
