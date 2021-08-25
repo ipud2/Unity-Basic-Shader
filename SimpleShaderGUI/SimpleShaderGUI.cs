@@ -127,7 +127,7 @@ namespace TA
                 value = Func.PowPreserveSign(value, 1f / power);
             }
 
-            // EditorGUI.BeginChangeCheck();
+            EditorGUI.BeginChangeCheck();
 
             var labelWidth = EditorGUIUtility.labelWidth;
             EditorGUIUtility.labelWidth = 0;
@@ -311,7 +311,7 @@ namespace TA
     
     /// <summary>
     /// 在折叠组内以默认形式绘制属性
-    /// group：父折叠组的group key，
+    /// group：父折叠组的group spaceNumber，
     /// </summary>
     public class SubDrawer : MaterialPropertyDrawer
     {
@@ -374,7 +374,7 @@ namespace TA
     
      /// <summary>
     /// 在折叠组内以默认形式绘制属性
-    /// group：父折叠组的group key，
+    /// group：父折叠组的group spaceNumber，
     /// </summary>
     public class SubKeyItemDrawer : MaterialPropertyDrawer
     {
@@ -383,7 +383,7 @@ namespace TA
         protected string group = "";
         protected string key = "";
         protected float height;
-        // protected bool needShow => Func.NeedShow(group+key);
+        // protected bool needShow => Func.NeedShow(group+spaceNumber);
         protected bool needShow => Func.NeedShow(group,key);
         protected virtual bool matchPropType => true;
         protected MaterialProperty prop;
@@ -449,7 +449,7 @@ namespace TA
         protected string group = "";
         protected string key = "";
         protected float height;
-        // protected bool needShow => Func.NeedShow(group+key);
+        // protected bool needShow => Func.NeedShow(group+spaceNumber);
         protected bool needShow
         {
             get
@@ -527,7 +527,7 @@ namespace TA
         protected string group = "";
         protected string key = "";
         protected float height;
-        // protected bool needShow => Func.NeedShow(group+key);
+        // protected bool needShow => Func.NeedShow(group+spaceNumber);
         protected bool needShow
         {
             get
@@ -592,9 +592,8 @@ namespace TA
         {
             editor.DefaultShaderProperty(prop, label.text);
         }
-    }
-     
-     
+    } 
+    
      /// <summary>
     /// k为对应KeyWord，float值为当前激活的数组index , group：父折叠组的group "_" 为没有组
     /// </summary>
@@ -1002,6 +1001,57 @@ namespace TA
         }
     }
 
+    /// <summary>
+    /// 空格 S开头 加上 ‘_’ 后面就是空格数字  
+    /// 用法  [SubSpace(Group_A,S_100)]
+    /// </summary>
+    public class SubSpaceDrawer : SubDrawer
+    {
+        public SubSpaceDrawer(string group) : this(group, "S_10") { }
+        public SubSpaceDrawer(string group, string keyWord)
+        {
+            this.group = group;
+            string[] ss = keyWord.Split('_');
+            if(ss[0] != "S")
+                Debug.LogError(" SubSpace 用法错误");
+            this.keyWord = int.Parse( ss[1]);
+        }
+        protected override bool matchPropType => prop.type == MaterialProperty.PropType.Float;
+        int keyWord=10;
+        public override void DrawProp(Rect position, MaterialProperty prop, GUIContent label, MaterialEditor editor)
+        {
+            GUILayout.Space(keyWord);
+            
+            /*
+            EditorGUI.showMixedValue = prop.hasMixedValue;
+            EditorGUI.BeginChangeCheck();
+            var value = EditorGUILayout.Toggle(label, prop.floatValue > 0.0f);
+            string k = Func.GetKeyWord(keyWord, prop.name);
+            if (EditorGUI.EndChangeCheck())
+            {
+                prop.floatValue = value ? 1.0f : 0.0f;
+                Func.SetShaderKeyWord(editor.targets, k, value);
+            }
+            else
+            {
+                if (!prop.hasMixedValue)
+                    Func.SetShaderKeyWord(editor.targets, k, value);
+            }
+            if (GUIData.keyWord.ContainsKey(k))
+            {
+                GUIData.keyWord[k] = value;
+            }
+            else
+            {
+                GUIData.keyWord.Add(k, value);
+            }
+            EditorGUI.showMixedValue = false;
+            */
+        }
+    }
+
+
+    
     /// <summary>
     /// 同内置PowerSlider
     /// </summary>
