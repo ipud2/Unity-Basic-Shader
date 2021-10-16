@@ -182,37 +182,39 @@ namespace TA
             c.a = color.a;
             return c;
         }
-
+        
+        //去掉关键字
         public static void SetShaderKeyWord(UnityEngine.Object[] materials, string keyWord, bool isEnable)
         {
-            foreach (Material m in materials)
-            {
-                if (m.IsKeywordEnabled(keyWord))
-                {
-                    if (!isEnable) m.DisableKeyword(keyWord);
-                }
-                else
-                {
-                    if (isEnable) m.EnableKeyword(keyWord);
-                }
-            }
+            // foreach (Material m in materials)
+            // {
+            //     if (m.IsKeywordEnabled(keyWord))
+            //     {
+            //         if (!isEnable) m.DisableKeyword(keyWord);
+            //     }
+            //     else
+            //     {
+            //         if (isEnable) m.EnableKeyword(keyWord);
+            //     }
+            // }
         }
-
+        
+        //去掉关键字
         public static void SetShaderKeyWord(UnityEngine.Object[] materials, string[] keyWords, int index)
         {
-            Debug.Assert(keyWords.Length >= 1 && index < keyWords.Length && index >= 0, $"KeyWords:{keyWords} or Index:{index} Error! ");
-            for (int i = 0; i < keyWords.Length; i++)
-            {
-                SetShaderKeyWord(materials, keyWords[i], index == i);
-                if (GUIData.keyWord.ContainsKey(keyWords[i]))
-                {
-                    GUIData.keyWord[keyWords[i]] = index == i;
-                }
-                else
-                {
-                    Debug.LogError("KeyWord not exist! Throw a shader error to refresh the instance.");
-                }
-            }
+            // Debug.Assert(keyWords.Length >= 1 && index < keyWords.Length && index >= 0, $"KeyWords:{keyWords} or Index:{index} Error! ");
+            // for (int i = 0; i < keyWords.Length; i++)
+            // {
+            //     SetShaderKeyWord(materials, keyWords[i], index == i);
+            //     if (GUIData.keyWord.ContainsKey(keyWords[i]))
+            //     {
+            //         GUIData.keyWord[keyWords[i]] = index == i;
+            //     }
+            //     else
+            //     {
+            //         Debug.LogError("KeyWord not exist! Throw a shader error to refresh the instance.");
+            //     }
+            // }
         }
 
         public static bool NeedShow(string group)
@@ -263,14 +265,14 @@ namespace TA
         string keyWord;
         int style;
         public MainDrawer() : this("") { }
-        public MainDrawer(string group) : this(group, "", 3) { }
-        public MainDrawer(string group, string keyword) : this(group, keyword, 0) { }
-        public MainDrawer(string group, string keyWord, float style)
-        {
-            this.group = group;
-            this.keyWord = keyWord;
-            this.style = (int)style;
-        }
+        public MainDrawer(string group) { this.group = group;this.keyWord = ""; this.style = 3; }
+        // public MainDrawer(string group, string keyword) : this(group, keyword, 0) { }
+        // public MainDrawer(string group, string keyWord, float style)
+        // {
+        //     this.group = group;
+        //     this.keyWord = keyWord;
+        //     this.style = (int)style;
+        // }
 
         public override void OnGUI(Rect position, MaterialProperty prop, GUIContent label, MaterialEditor editor)
         {
@@ -1051,7 +1053,6 @@ namespace TA
     }
 
 
-    
     /// <summary>
     /// 同内置PowerSlider
     /// </summary>
