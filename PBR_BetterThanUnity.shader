@@ -46,7 +46,7 @@ Shader "Unlit/MyPBR"
             // #include "UnityStandardConfig.cginc"
 
             #include "UnityCG.cginc"
-			#include "Lighting.cginc"
+	    #include "Lighting.cginc"
             #include "UnityGlobalIllumination.cginc"
 
             struct appdata
@@ -205,15 +205,11 @@ Shader "Unlit/MyPBR"
 
 //================== Normal Map  ============================================== //
                 float3 NormalMap = UnpackNormal(tex2D(_NormalTex,uv));
-
+		
+		//TBN矩阵:将世界坐标转到Tangent坐标
+		//TBN是正交矩阵，正交矩阵的逆等于其转置
                 float3x3 TBN = float3x3(T,B,N);
-                // TBN = transpose(TBN);
-                // N = normalize( mul (TBN,NormalMap) );
                 N = normalize( mul (NormalMap,TBN));
-                // N.x = dot(float3(T.x,B.x,N.x),NormalMap);
-                // N.y = dot(float3(T.y,B.y,N.y),NormalMap);
-                // N.z = dot(float3(T.z,B.z,N.z),NormalMap);
-                N = normalize(N);
 
 //================== PBR  ============================================== //
                 // float3 BaseColor = _BaseColor;
