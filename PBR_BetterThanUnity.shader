@@ -124,9 +124,9 @@ Shader "Unlit/MyPBR"
             }
 
             //F
-            float3 F_FrenelSchlick(float HV,float3 F0)
+            float3 F_FrenelSchlick(float NV,float3 F0)
             {
-                return F0 +(1.0 - F0)*pow(1.0-HV,5);
+                return F0 +(1.0 - F0)*pow(1.0-NV,5);
             }
 
             float3 FresnelSchlickRoughness(float NV,float3 F0,float Roughness)
@@ -236,7 +236,7 @@ Shader "Unlit/MyPBR"
                 float NL = max(dot(N,L),0);
                
                 float D = D_DistributionGGX(N,H,Roughness);
-                float3 F = F_FrenelSchlick(HV,F0);
+                float3 F = F_FrenelSchlick(NV,F0);
                 float G = G_GeometrySmith(N,V,L,Roughness);
 
                 float3 KS = F;
