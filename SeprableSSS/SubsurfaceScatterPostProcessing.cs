@@ -21,6 +21,8 @@ public class SubsurfaceScatterPostProcessing : MonoBehaviour
     private static int SSSScaler = Shader.PropertyToID("_SSSScaler");
     private static int SSSKernel = Shader.PropertyToID("_Kernel");
     private static int SSSSamples = Shader.PropertyToID("_Samples");
+
+    private static int SourceTexID = Shader.PropertyToID("_SourceTex");
     
     private void OnEnable()
     {
@@ -100,11 +102,11 @@ public class SubsurfaceScatterPostProcessing : MonoBehaviour
         // buffer.BlitStencil(BuiltinRenderTextureType.CameraTarget, BlurRT, BuiltinRenderTextureType.CameraTarget, mMat, 0);
         buffer.GetTemporaryRT(BlurRTID,mCam.pixelWidth,mCam.pixelHeight,0,FilterMode.Trilinear,RenderTextureFormat.DefaultHDR);
         
-        buffer.SetGlobalTexture(ShaderID._SourceTex, BuiltinRenderTextureType.CameraTarget);
+        buffer.SetGlobalTexture(SourceTexID, BuiltinRenderTextureType.CameraTarget);
         buffer.SetRenderTarget(BlurRTID);
         buffer.DrawMesh(mesh, Matrix4x4.identity, mMat, 0, 0);
         
-        buffer.SetGlobalTexture(ShaderID._SourceTex, BlurRTID);
+        buffer.SetGlobalTexture(SourceTexID, BlurRTID);
         buffer.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
         buffer.DrawMesh(mesh, Matrix4x4.identity, mMat, 0, 1);
         
