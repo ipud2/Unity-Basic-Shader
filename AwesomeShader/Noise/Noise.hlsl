@@ -5,7 +5,7 @@ float3 hash33(float3 p3)
     return -1.0 + 2.0 * fract(float3((p.x + p.y)*p.z, (p.x+p.z)*p.y, (p.y+p.z)*p.x));
 }
 
-float worley(float3 p, float scale)
+float worley3d(float3 p, float scale)
 {
     float3 id = floor(p*scale);
     float3 fd = fract(p*scale);
