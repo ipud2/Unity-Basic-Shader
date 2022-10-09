@@ -6,6 +6,8 @@ Shader "Unlit/Basic"
         _Value ("_Value",Float) =1
         _RangeValue("_RangeValue",Range(0,1)) = 0.5
         _Color ("_Color",Color) = (0.5,0.3,0.2,1)
+        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlendMode("Src Blend Mode", Float) = 5
+		[Enum(UnityEngine.Rendering.BlendMode)] _DstBlendMode("Dst Blend Mode", Float) = 10
     }
     SubShader
     {
@@ -18,8 +20,12 @@ Shader "Unlit/Basic"
         /*
         //Transparent Setup
          Tags { "Queue"="Transparent"  "RenderType"="Transparent" "LightMode"="ForwardBase"}
-         Blend SrcAlpha OneMinusSrcAlpha
+         Blend [_SrcBlendMode][_DstBlendMode]
         */
+        //CGINCLUDE
+        //float _SrcBlendMode;
+        //float _DstBlendMode;
+        //ENDCG
 
         Pass
         {
