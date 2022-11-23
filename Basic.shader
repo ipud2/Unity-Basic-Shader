@@ -34,23 +34,13 @@ Shader "Unlit/Basic"
             #pragma fragment frag
             #pragma fullforwardshadows
             #pragma multi_compile_fwdbase
+	    #pragma multi_compile_instancing
 
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "UnityGlobalIllumination.cginc"
             #include "AutoLight.cginc"
-            // #include "NPRBrdf.cginc" 
-
-
-            #ifndef UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX
-            //only defining to not throw compilation error over Unity 5.5
-            #define UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input)
-            #endif
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #include "UnityCG.cginc"
-
+	    
             struct appdata
             {
                 float4 vertex : POSITION;
@@ -96,7 +86,6 @@ Shader "Unlit/Basic"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
-
 
             float4 frag(v2f i) : SV_Target
             {
