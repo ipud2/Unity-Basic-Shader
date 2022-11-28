@@ -86,6 +86,21 @@ Shader "Unlit/Basic"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+	    
+	    /*
+	    //Sample Screen ShadowMap
+            sampler2D_float _ShadowMapTexture;
+
+            float GetShadow(float3 posWS)
+            {
+                float4 posCS = mul(unity_MatrixVP,float4(posWS.xyz,1));
+                float2 screenPos = posCS.xy/posCS.w;
+                screenPos = screenPos*0.5+0.5;
+                //DirectX revert y
+                screenPos.y = 1- screenPos.y;
+                return tex2D(_ShadowMapTexture,screenPos.xy);
+            }
+	    */
 
             float4 frag(v2f i) : SV_Target
             {
