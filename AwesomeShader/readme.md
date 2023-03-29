@@ -1083,6 +1083,126 @@ float fbm( in vec2 p ){
 }
 ```
 
+## [WorleyNoise3D ](https://www.shadertoy.com/view/WdSfDy)
+
+```
+#define PI 3.14159265359
+
+float GetIntegerNoise(vec2 p)  // replace this by something better, p is essentially ivec2
+{
+    p  = 53.7 * fract( (p*0.3183099) + vec2(0.71,0.113));
+    return fract( p.x*p.y*(p.x+p.y) );
+}
+
+float Hash(float f)
+{
+    return fract(sin(f)*43758.5453);
+}
+
+float Hash21(vec2 v)
+{
+    return Hash(dot(v, vec2(253.14, 453.74)));
+}
+
+float Hash31(vec3 v)
+{
+    return Hash(dot(v, vec3(253.14, 453.74, 183.3)));
+}
+
+vec3 Random3D( vec3 p ) {
+    return fract(sin(vec3(dot(p,vec3(127.1,311.7,217.3)),dot(p,vec3(269.5,183.3,431.1)), dot(p,vec3(365.6,749.9,323.7))))*437158.5453);
+}
+
+vec2 Rotate2D(vec2 v, float theta)
+{
+    float c = cos(theta);
+    float s = sin(theta);
+    
+    mat2 rotMat = mat2(c,s,-s,c);
+    return rotMat * v;
+}
+
+vec4 GetWorleyNoise3D(vec3 uvw)
+{
+    float noise = 0.0;
+    
+    vec3 p = floor(uvw);
+    vec3 f = fract(uvw);
+    
+    vec4 res = vec4(1.0);
+    for(int x = -1; x <=1; ++x)
+    {
+        for(int y = -1; y <=1; ++y)
+        {
+            for(int z = -1; z <=1; ++z)
+            {
+                vec3 gp = p + vec3(x, y, z);	//grid point
+
+                vec3 v = Random3D(gp);
+
+				vec3 diff = gp + v - uvw;
+                
+                float d = length(diff);
+                
+                if(d < res.x)
+                {
+                    res.xyz = vec3(d, res.x, res.y);
+                }
+                else if(d < res.y)
+                {
+                    res.xyz = vec3(res.x, d, res.y);
+                }
+                else if(d < res.z)
+                {
+                    res.z = d;
+                }
+                
+                res.w = Hash31(gp);
+            }
+        }
+    }
+
+    return res;
+}
+
+float fBMWorley(vec3 x, float lacunarity, float gain, int numOctaves)
+{
+    float total = 0.0;
+    float frequency = 1.0;
+    float amplitude = 1.0;
+	float totalAmplitude = 0.0;
+    for(int i = 0; i < numOctaves; ++i)
+    {
+        totalAmplitude += amplitude;
+        
+        vec4 n = GetWorleyNoise3D(x * frequency);
+        total += amplitude * n.x;
+        
+        frequency *= lacunarity;
+        amplitude *= gain;
+    }
+    
+    return total/totalAmplitude;
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 uv = (2.0 * fragCoord - iResolution.xy) / iResolution.y;
+    uv *= 3.0;
+    vec3 uvw = vec3(uv, iTime * 0.1);
+    
+    //uv *= 0.5*(sin(iTime * 2.0) + 5.0) * 2.40;
+
+	float noise = fBMWorley(uvw, 2.0, 0.5, 4);
+    //noise += GetWorleyNoise3D(uvw * 2.0) * 0.5;
+
+    vec3 color = noise * vec3(1.0);
+    fragColor = vec4(1.0 - color, 1.0);
+}
+
+
+```
+
 Articles:
 
 * Improving Noise, Ken Perlin <http://mrl.nyu.edu/~perlin/paper445.pdf>
