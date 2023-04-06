@@ -6,8 +6,8 @@ Shader "Unlit/Basic"
         _Value ("_Value",Float) =1
         _RangeValue("_RangeValue",Range(0,1)) = 0.5
         _Color ("_Color",Color) = (0.5,0.3,0.2,1)
-        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlendMode("Src Blend Mode", Float) = 5
-		[Enum(UnityEngine.Rendering.BlendMode)] _DstBlendMode("Dst Blend Mode", Float) = 10
+//        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlendMode("Src Blend Mode", Float) = 5
+//		[Enum(UnityEngine.Rendering.BlendMode)] _DstBlendMode("Dst Blend Mode", Float) = 10
     }
     SubShader
     {
@@ -34,7 +34,6 @@ Shader "Unlit/Basic"
             #pragma fragment frag
             #pragma fullforwardshadows
             #pragma multi_compile_fwdbase
-	    #pragma multi_compile_instancing
 
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
@@ -46,8 +45,8 @@ Shader "Unlit/Basic"
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
                 float2 uv2 : TEXCOORD1;
-                float4 tangent :TANGENT;
-                float3 normal : NORMAL;
+                float4 tangentOS :TANGENT;
+                float3 normalOS : NORMAL;
                 float4 vertexColor : COLOR;
             };
 
@@ -55,12 +54,12 @@ Shader "Unlit/Basic"
             {
                 float4 pos : SV_POSITION; // 必须命名为pos ，因为 TRANSFER_VERTEX_TO_FRAGMENT 是这么命名的，为了正确地获取到Shadow
                 float2 uv : TEXCOORD0;
-                float3 tangent : TEXCOORD1;
-                float3 bitangent : TEXCOORD2;
-                float3 normal : TEXCOORD3;
-                float3 worldPosition : TEXCOORD4;
-                float3 localPosition : TEXCOORD5;
-                float3 localNormal : TEXCOORD6;
+                float3 tangentWS : TEXCOORD1;
+                float3 bitangentWS : TEXCOORD2;
+                float3 normalWS : TEXCOORD3;
+                float3 posWS : TEXCOORD4;
+                float3 posOS : TEXCOORD5;
+                float3 normalOS : TEXCOORD6;
                 float4 vertexColor : TEXCOORD7;
                 float2 uv2 : TEXCOORD8;
                 LIGHTING_COORDS(9, 10)
@@ -72,12 +71,12 @@ Shader "Unlit/Basic"
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
                 o.uv2 = v.uv2;
-                o.normal = UnityObjectToWorldNormal(v.normal);
-                o.worldPosition = mul(unity_ObjectToWorld, v.vertex);
-                o.localPosition = v.vertex.xyz;
-                o.tangent = UnityObjectToWorldDir(v.tangent);
-                o.bitangent = cross(o.normal, o.tangent) * v.tangent.w;
-                o.localNormal = v.normal;
+                o.normalWS = UnityObjectToWorldNormal(v.normalOS);
+                o.posWS = mul(unity_ObjectToWorld, v.vertex);
+                o.posOS = v.vertex.xyz;
+                o.tangentWS = UnityObjectToWorldDir(v.tangentOS);
+                o.bitangentWS = cross(o.normalWS, o.tangentWS) * v.tangentOS.w;
+                o.normalOS = v.normalOS;
                 o.vertexColor = v.vertexColor;
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
 
@@ -86,30 +85,15 @@ Shader "Unlit/Basic"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
-	    
-	    /*
-	    //Sample Screen ShadowMap
-            sampler2D_float _ShadowMapTexture;
-
-            float GetShadow(float3 posWS)
-            {
-                float4 posCS = mul(unity_MatrixVP,float4(posWS.xyz,1));
-                float2 screenPos = posCS.xy/posCS.w;
-                screenPos = screenPos*0.5+0.5;
-                //DirectX revert y
-                screenPos.y = 1- screenPos.y;
-                return tex2D(_ShadowMapTexture,screenPos.xy);
-            }
-	    */
-
+	
             float4 frag(v2f i) : SV_Target
             {
-                float3 T = normalize(i.tangent);
-                float3 N = normalize(i.normal);
+                float3 T = normalize(i.tangentWS);
+                float3 N = normalize(i.normalWS);
                 //float3 B = normalize( cross(N,T));
-                float3 B = normalize(i.bitangent);
-                float3 L = normalize(UnityWorldSpaceLightDir(i.worldPosition.xyz));
-                float3 V = normalize(UnityWorldSpaceViewDir(i.worldPosition.xyz));
+                float3 B = normalize(i.bitangentWS);
+                float3 L = normalize(UnityWorldSpaceLightDir(i.posWS.xyz));
+                float3 V = normalize(UnityWorldSpaceViewDir(i.posWS.xyz));
                 float3 H = normalize(V + L);
                 float2 uv = i.uv;
                 float2 uv2 = i.uv2;
