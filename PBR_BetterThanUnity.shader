@@ -17,7 +17,7 @@ Shader "Unlit/JoeyTA101PBR"
         _BaseColorTex ("_BaseColorTex", 2D) = "white" {}
         _MetallicTex ("_MetallicTex", 2D) = "white" {}
         _RoughnessTex ("_RoughnessTex", 2D) = "white" {}
-        _EmissionTex ("_EmissionTex", 2D) = "white" {}
+        _EmissionTex ("_EmissionTex", 2D) = "black" {}
 
         [Space(10)]
         _NormalTex ("_NormalTex", 2D) = "bump" {}
