@@ -23,7 +23,7 @@ Shader "Unlit/MyPBR"
         _RoughnessTex ("_RoughnessTex", 2D) = "white" {}
 
         _EmissionTex ("_EmissionTex", 2D) = "white" {}
-        _NormalTex ("_NormalTex", 2D) = "black" {}
+        _NormalTex ("_NormalTex", 2D) = "bump" {}
         _AOTex ("_AOTex", 2D) = "white" {}
 
 
