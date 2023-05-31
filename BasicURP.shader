@@ -1,332 +1,756 @@
-// When creating shaders for Universal Render Pipeline you can you the ShaderGraph which is super AWESOME!
-// However, if you want to author shaders in shading language you can use this teamplate as a base.
-// Please note, this shader does not necessarily match perfomance of the built-in URP Lit shader.
-// This shader works with URP 7.1.x and above
-Shader "Universal Render Pipeline/Custom/Physically Based Example"
+Shader "New Amplify Shader"
 {
-    Properties
-    {
-        // Specular vs Metallic workflow
-        [HideInInspector] _WorkflowMode("WorkflowMode", Float) = 1.0
+	Properties
+	{
+		[HideInInspector] _AlphaCutoff("Alpha Cutoff ", Range(0, 1)) = 0.5
+		[HideInInspector] _EmissionColor("Emission Color", Color) = (1,1,1,1)
 
-        [MainColor] _BaseColor("Color", Color) = (0.5,0.5,0.5,1)
-        [MainTexture] _BaseMap("Albedo", 2D) = "white" {}
 
-        _Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
+		//_TessPhongStrength( "Tess Phong Strength", Range( 0, 1 ) ) = 0.5
+		//_TessValue( "Tess Max Tessellation", Range( 1, 32 ) ) = 16
+		//_TessMin( "Tess Min Distance", Float ) = 10
+		//_TessMax( "Tess Max Distance", Float ) = 25
+		//_TessEdgeLength ( "Tess Edge length", Range( 2, 50 ) ) = 16
+		//_TessMaxDisp( "Tess Max Displacement", Float ) = 25
 
-        _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
-        _GlossMapScale("Smoothness Scale", Range(0.0, 1.0)) = 1.0
-        _SmoothnessTextureChannel("Smoothness texture channel", Float) = 0
+		[HideInInspector] _QueueOffset("_QueueOffset", Float) = 0
+        [HideInInspector] _QueueControl("_QueueControl", Float) = -1
 
-        [Gamma] _Metallic("Metallic", Range(0.0, 1.0)) = 0.0
-        _MetallicGlossMap("Metallic", 2D) = "white" {}
+        [HideInInspector][NoScaleOffset] unity_Lightmaps("unity_Lightmaps", 2DArray) = "" {}
+        [HideInInspector][NoScaleOffset] unity_LightmapsInd("unity_LightmapsInd", 2DArray) = "" {}
+        [HideInInspector][NoScaleOffset] unity_ShadowMasks("unity_ShadowMasks", 2DArray) = "" {}
+	}
 
-        _SpecColor("Specular", Color) = (0.2, 0.2, 0.2)
-        _SpecGlossMap("Specular", 2D) = "white" {}
+	SubShader
+	{
+		LOD 0
 
-        [ToggleOff] _SpecularHighlights("Specular Highlights", Float) = 1.0
-        [ToggleOff] _EnvironmentReflections("Environment Reflections", Float) = 1.0
+		
 
-        _BumpScale("Scale", Float) = 1.0
-        _BumpMap("Normal Map", 2D) = "bump" {}
+		Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" "UniversalMaterialType"="Unlit" }
 
-        _OcclusionStrength("Strength", Range(0.0, 1.0)) = 1.0
-        _OcclusionMap("Occlusion", 2D) = "white" {}
+		Cull Back
+		AlphaToMask Off
 
-        _EmissionColor("Color", Color) = (0,0,0)
-        _EmissionMap("Emission", 2D) = "white" {}
+		
 
-        // Blending state
-        [HideInInspector] _Surface("__surface", Float) = 0.0
-        [HideInInspector] _Blend("__blend", Float) = 0.0
-        [HideInInspector] _AlphaClip("__clip", Float) = 0.0
-        [HideInInspector] _SrcBlend("__src", Float) = 1.0
-        [HideInInspector] _DstBlend("__dst", Float) = 0.0
-        [HideInInspector] _ZWrite("__zw", Float) = 1.0
-        [HideInInspector] _Cull("__cull", Float) = 2.0
+		HLSLINCLUDE
+		#pragma target 3.5
+		#pragma prefer_hlslcc gles
+		// ensure rendering platforms toggle list is visible
 
-        _ReceiveShadows("Receive Shadows", Float) = 1.0
+		#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+		#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Filtering.hlsl"
+	
+		ENDHLSL
 
-            // Editmode props
-            [HideInInspector] _QueueOffset("Queue offset", Float) = 0.0
-    }
+		
+		Pass
+		{
+			
+			Name "Forward"
+			Tags { "LightMode"="UniversalForwardOnly" }
 
-    SubShader
-    {
-        // With SRP we introduce a new "RenderPipeline" tag in Subshader. This allows to create shaders
-        // that can match multiple render pipelines. If a RenderPipeline tag is not set it will match
-        // any render pipeline. In case you want your subshader to only run in LWRP set the tag to
-        // "UniversalRenderPipeline"
-        Tags{"RenderType" = "Opaque" "RenderPipeline" = "UniversalRenderPipeline" "IgnoreProjector" = "True"}
-        LOD 300
+			Blend One Zero, One Zero
+			ZWrite On
+			ZTest LEqual
+			Offset 0 , 0
+			ColorMask RGBA
 
-        // ------------------------------------------------------------------
-        // Forward pass. Shades GI, emission, fog and all lights in a single pass.
-        // Compared to Builtin pipeline forward renderer, LWRP forward renderer will
-        // render a scene with multiple lights with less drawcalls and less overdraw.
-        Pass
-        {
-            // "Lightmode" tag must be "UniversalForward" or not be defined in order for
-            // to render objects.
-            Name "StandardLit"
-            Tags{"LightMode" = "UniversalForward"}
+			
 
-            Blend[_SrcBlend][_DstBlend]
-            ZWrite[_ZWrite]
-            Cull[_Cull]
+			HLSLPROGRAM
 
-            HLSLPROGRAM
-            // Required to compile gles 2.0 with standard SRP library
-            // All shaders must be compiled with HLSLcc and currently only gles is not using HLSLcc by default
-            #pragma prefer_hlslcc gles
-            #pragma exclude_renderers d3d11_9x
-            #pragma target 2.0
+			#define _RECEIVE_SHADOWS_OFF 1
+			#define ASE_SRP_VERSION 120107
 
-            // -------------------------------------
-            // Material Keywords
-            // unused shader_feature variants are stripped from build automatically
-            #pragma shader_feature _NORMALMAP
-            #pragma shader_feature _ALPHATEST_ON
-            #pragma shader_feature _ALPHAPREMULTIPLY_ON
-            #pragma shader_feature _EMISSION
-            #pragma shader_feature _METALLICSPECGLOSSMAP
-            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-            #pragma shader_feature _OCCLUSIONMAP
 
-            #pragma shader_feature _SPECULARHIGHLIGHTS_OFF
-            #pragma shader_feature _GLOSSYREFLECTIONS_OFF
-            #pragma shader_feature _SPECULAR_SETUP
-            #pragma shader_feature _RECEIVE_SHADOWS_OFF
+			#pragma multi_compile _ _DBUFFER_MRT1 _DBUFFER_MRT2 _DBUFFER_MRT3
 
-            // -------------------------------------
-            // Universal Render Pipeline keywords
-            // When doing custom shaders you most often want to copy and past these #pragmas
-            // These multi_compile variants are stripped from the build depending on:
-            // 1) Settings in the LWRP Asset assigned in the GraphicsSettings at build time
-            // e.g If you disable AdditionalLights in the asset then all _ADDITIONA_LIGHTS variants
-            // will be stripped from build
-            // 2) Invalid combinations are stripped. e.g variants with _MAIN_LIGHT_SHADOWS_CASCADE
-            // but not _MAIN_LIGHT_SHADOWS are invalid and therefore stripped.
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
-            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
-            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
-            #pragma multi_compile _ _SHADOWS_SOFT
-            #pragma multi_compile _ _MIXED_LIGHTING_SUBTRACTIVE
+			#pragma multi_compile _ LIGHTMAP_ON
+			#pragma multi_compile _ DIRLIGHTMAP_COMBINED
+			#pragma shader_feature _ _SAMPLE_GI
+			#pragma multi_compile _ DEBUG_DISPLAY
 
-            // -------------------------------------
-            // Unity defined keywords
-            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
-            #pragma multi_compile _ LIGHTMAP_ON
-            #pragma multi_compile_fog
+			#pragma vertex vert
+			#pragma fragment frag
 
-            //--------------------------------------
-            // GPU Instancing
-            #pragma multi_compile_instancing
+			#define SHADERPASS SHADERPASS_UNLIT
 
-            #pragma vertex LitPassVertex
-            #pragma fragment LitPassFragment
+			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Texture.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/TextureStack.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DBuffer.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
 
-            // Including the following two function is enought for shading with Universal Pipeline. Everything is included in them.
-            // Core.hlsl will include SRP shader library, all constant buffers not related to materials (perobject, percamera, perframe).
-            // It also includes matrix/space conversion functions and fog.
-            // Lighting.hlsl will include the light functions/data to abstract light constants. You should use GetMainLight and GetLight functions
-            // that initialize Light struct. Lighting.hlsl also include GI, Light BDRF functions. It also includes Shadows.
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Debug/Debugging3D.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Input.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceData.hlsl"
 
-            // Required by all Universal Render Pipeline shaders.
-            // It will include Unity built-in shader variables (except the lighting variables)
-            // (https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
-            // It will also include many utilitary functions. 
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+			
 
-            // Include this if you are doing a lit shader. This includes lighting shader variables,
-            // lighting and shadow functions
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+			struct VertexInput
+			{
+				float4 vertex : POSITION;
+				float3 ase_normal : NORMAL;
+				float4 ase_texcoord : TEXCOORD0;
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+			};
 
-            // Material shader variables are not defined in SRP or LWRP shader library.
-            // This means _BaseColor, _BaseMap, _BaseMap_ST, and all variables in the Properties section of a shader
-            // must be defined by the shader itself. If you define all those properties in CBUFFER named
-            // UnityPerMaterial, SRP can cache the material properties between frames and reduce significantly the cost
-            // of each drawcall.
-            // In this case, for sinmplicity LitInput.hlsl is included. This contains the CBUFFER for the material
-            // properties defined above. As one can see this is not part of the ShaderLibrary, it specific to the
-            // LWRP Lit shader.
-            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
+			struct VertexOutput
+			{
+				float4 clipPos : SV_POSITION;
+				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+					float3 worldPos : TEXCOORD0;
+				#endif
+				#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+					float4 shadowCoord : TEXCOORD1;
+				#endif
+				#ifdef ASE_FOG
+					float fogFactor : TEXCOORD2;
+				#endif
+				float4 ase_texcoord3 : TEXCOORD3;
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+				UNITY_VERTEX_OUTPUT_STEREO
+			};
 
-            struct Attributes
-            {
-                float4 positionOS   : POSITION;
-                float3 normalOS     : NORMAL;
-                float4 tangentOS    : TANGENT;
-                float2 uv           : TEXCOORD0;
-                float2 uvLM         : TEXCOORD1;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
+			CBUFFER_START(UnityPerMaterial)
+						#ifdef ASE_TESSELLATION
+				float _TessPhongStrength;
+				float _TessValue;
+				float _TessMin;
+				float _TessMax;
+				float _TessEdgeLength;
+				float _TessMaxDisp;
+			#endif
+			CBUFFER_END
 
-            struct Varyings
-            {
-                float2 uv                       : TEXCOORD0;
-                float2 uvLM                     : TEXCOORD1;
-                float4 positionWSAndFogFactor   : TEXCOORD2; // xyz: positionWS, w: vertex fog factor
-                half3  normalWS                 : TEXCOORD3;
+			
 
-#if _NORMALMAP
-                half3 tangentWS                 : TEXCOORD4;
-                half3 bitangentWS               : TEXCOORD5;
-#endif
+			
+			VertexOutput VertexFunction ( VertexInput v  )
+			{
+				VertexOutput o = (VertexOutput)0;
+				UNITY_SETUP_INSTANCE_ID(v);
+				UNITY_TRANSFER_INSTANCE_ID(v, o);
+				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-#ifdef _MAIN_LIGHT_SHADOWS
-                float4 shadowCoord              : TEXCOORD6; // compute shadow coord per-vertex for the main light
-#endif
-                float4 positionCS               : SV_POSITION;
-            };
+				o.ase_texcoord3.xy = v.ase_texcoord.xy;
+				
+				//setting value to unused interpolator channels and avoid initialization warnings
+				o.ase_texcoord3.zw = 0;
 
-            Varyings LitPassVertex(Attributes input)
-            {
-                Varyings output;
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+					float3 defaultVertexValue = v.vertex.xyz;
+				#else
+					float3 defaultVertexValue = float3(0, 0, 0);
+				#endif
 
-                // VertexPositionInputs contains position in multiple spaces (world, view, homogeneous clip space)
-                // Our compiler will strip all unused references (say you don't use view space).
-                // Therefore there is more flexibility at no additional cost with this struct.
-                VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
+				float3 vertexValue = defaultVertexValue;
 
-                // Similar to VertexPositionInputs, VertexNormalInputs will contain normal, tangent and bitangent
-                // in world space. If not used it will be stripped.
-                VertexNormalInputs vertexNormalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+					v.vertex.xyz = vertexValue;
+				#else
+					v.vertex.xyz += vertexValue;
+				#endif
 
-                // Computes fog factor per-vertex.
-                float fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
+				v.ase_normal = v.ase_normal;
 
-                // TRANSFORM_TEX is the same as the old shader library.
-                output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
-                output.uvLM = input.uvLM.xy * unity_LightmapST.xy + unity_LightmapST.zw;
+				float3 positionWS = TransformObjectToWorld( v.vertex.xyz );
+				float4 positionCS = TransformWorldToHClip( positionWS );
 
-                output.positionWSAndFogFactor = float4(vertexInput.positionWS, fogFactor);
-                output.normalWS = vertexNormalInput.normalWS;
+				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+					o.worldPos = positionWS;
+				#endif
 
-                // Here comes the flexibility of the input structs.
-                // In the variants that don't have normal map defined
-                // tangentWS and bitangentWS will not be referenced and
-                // GetVertexNormalInputs is only converting normal
-                // from object to world space
-#ifdef _NORMALMAP
-                output.tangentWS = vertexNormalInput.tangentWS;
-                output.bitangentWS = vertexNormalInput.bitangentWS;
-#endif
+				#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+					VertexPositionInputs vertexInput = (VertexPositionInputs)0;
+					vertexInput.positionWS = positionWS;
+					vertexInput.positionCS = positionCS;
+					o.shadowCoord = GetShadowCoord( vertexInput );
+				#endif
 
-#ifdef _MAIN_LIGHT_SHADOWS
-                // shadow coord for the main light is computed in vertex.
-                // If cascades are enabled, LWRP will resolve shadows in screen space
-                // and this coord will be the uv coord of the screen space shadow texture.
-                // Otherwise LWRP will resolve shadows in light space (no depth pre-pass and shadow collect pass)
-                // In this case shadowCoord will be the position in light space.
-                output.shadowCoord = GetShadowCoord(vertexInput);
-#endif
-                // We just use the homogeneous clip position from the vertex input
-                output.positionCS = vertexInput.positionCS;
-                return output;
-            }
+				#ifdef ASE_FOG
+					o.fogFactor = ComputeFogFactor( positionCS.z );
+				#endif
 
-            half4 LitPassFragment(Varyings input) : SV_Target
-            {
-                // Surface data contains albedo, metallic, specular, smoothness, occlusion, emission and alpha
-                // InitializeStandarLitSurfaceData initializes based on the rules for standard shader.
-                // You can write your own function to initialize the surface data of your shader.
-                SurfaceData surfaceData;
-                InitializeStandardLitSurfaceData(input.uv, surfaceData);
+				o.clipPos = positionCS;
 
-#if _NORMALMAP
-                half3 normalWS = TransformTangentToWorld(surfaceData.normalTS,
-                    half3x3(input.tangentWS, input.bitangentWS, input.normalWS));
-#else
-                half3 normalWS = input.normalWS;
-#endif
-                normalWS = normalize(normalWS);
+				return o;
+			}
 
-#ifdef LIGHTMAP_ON
-                // Normal is required in case Directional lightmaps are baked
-                half3 bakedGI = SampleLightmap(input.uvLM, normalWS);
-#else
-                // Samples SH fully per-pixel. SampleSHVertex and SampleSHPixel functions
-                // are also defined in case you want to sample some terms per-vertex.
-                half3 bakedGI = SampleSH(normalWS);
-#endif
+			#if defined(ASE_TESSELLATION)
+			struct VertexControl
+			{
+				float4 vertex : INTERNALTESSPOS;
+				float3 ase_normal : NORMAL;
+				float4 ase_texcoord : TEXCOORD0;
 
-                float3 positionWS = input.positionWSAndFogFactor.xyz;
-                half3 viewDirectionWS = SafeNormalize(GetCameraPositionWS() - positionWS);
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+			};
 
-                // BRDFData holds energy conserving diffuse and specular material reflections and its roughness.
-                // It's easy to plugin your own shading fuction. You just need replace LightingPhysicallyBased function
-                // below with your own.
-                BRDFData brdfData;
-                InitializeBRDFData(surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.alpha, brdfData);
+			struct TessellationFactors
+			{
+				float edge[3] : SV_TessFactor;
+				float inside : SV_InsideTessFactor;
+			};
 
-                // Light struct is provide by LWRP to abstract light shader variables.
-                // It contains light direction, color, distanceAttenuation and shadowAttenuation.
-                // LWRP take different shading approaches depending on light and platform.
-                // You should never reference light shader variables in your shader, instead use the GetLight
-                // funcitons to fill this Light struct.
-#ifdef _MAIN_LIGHT_SHADOWS
-                // Main light is the brightest directional light.
-                // It is shaded outside the light loop and it has a specific set of variables and shading path
-                // so we can be as fast as possible in the case when there's only a single directional light
-                // You can pass optionally a shadowCoord (computed per-vertex). If so, shadowAttenuation will be
-                // computed.
-                Light mainLight = GetMainLight(input.shadowCoord);
-#else
-                Light mainLight = GetMainLight();
-#endif
+			VertexControl vert ( VertexInput v )
+			{
+				VertexControl o;
+				UNITY_SETUP_INSTANCE_ID(v);
+				UNITY_TRANSFER_INSTANCE_ID(v, o);
+				o.vertex = v.vertex;
+				o.ase_normal = v.ase_normal;
+				o.ase_texcoord = v.ase_texcoord;
+				return o;
+			}
 
-                // Mix diffuse GI with environment reflections.
-                half3 color = GlobalIllumination(brdfData, bakedGI, surfaceData.occlusion, normalWS, viewDirectionWS);
+			TessellationFactors TessellationFunction (InputPatch<VertexControl,3> v)
+			{
+				TessellationFactors o;
+				float4 tf = 1;
+				float tessValue = _TessValue; float tessMin = _TessMin; float tessMax = _TessMax;
+				float edgeLength = _TessEdgeLength; float tessMaxDisp = _TessMaxDisp;
+				#if defined(ASE_FIXED_TESSELLATION)
+				tf = FixedTess( tessValue );
+				#elif defined(ASE_DISTANCE_TESSELLATION)
+				tf = DistanceBasedTess(v[0].vertex, v[1].vertex, v[2].vertex, tessValue, tessMin, tessMax, GetObjectToWorldMatrix(), _WorldSpaceCameraPos );
+				#elif defined(ASE_LENGTH_TESSELLATION)
+				tf = EdgeLengthBasedTess(v[0].vertex, v[1].vertex, v[2].vertex, edgeLength, GetObjectToWorldMatrix(), _WorldSpaceCameraPos, _ScreenParams );
+				#elif defined(ASE_LENGTH_CULL_TESSELLATION)
+				tf = EdgeLengthBasedTessCull(v[0].vertex, v[1].vertex, v[2].vertex, edgeLength, tessMaxDisp, GetObjectToWorldMatrix(), _WorldSpaceCameraPos, _ScreenParams, unity_CameraWorldClipPlanes );
+				#endif
+				o.edge[0] = tf.x; o.edge[1] = tf.y; o.edge[2] = tf.z; o.inside = tf.w;
+				return o;
+			}
 
-                // LightingPhysicallyBased computes direct light contribution.
-                color += LightingPhysicallyBased(brdfData, mainLight, normalWS, viewDirectionWS);
+			[domain("tri")]
+			[partitioning("fractional_odd")]
+			[outputtopology("triangle_cw")]
+			[patchconstantfunc("TessellationFunction")]
+			[outputcontrolpoints(3)]
+			VertexControl HullFunction(InputPatch<VertexControl, 3> patch, uint id : SV_OutputControlPointID)
+			{
+			   return patch[id];
+			}
 
-                // Additional lights loop
-#ifdef _ADDITIONAL_LIGHTS
+			[domain("tri")]
+			VertexOutput DomainFunction(TessellationFactors factors, OutputPatch<VertexControl, 3> patch, float3 bary : SV_DomainLocation)
+			{
+				VertexInput o = (VertexInput) 0;
+				o.vertex = patch[0].vertex * bary.x + patch[1].vertex * bary.y + patch[2].vertex * bary.z;
+				o.ase_normal = patch[0].ase_normal * bary.x + patch[1].ase_normal * bary.y + patch[2].ase_normal * bary.z;
+				o.ase_texcoord = patch[0].ase_texcoord * bary.x + patch[1].ase_texcoord * bary.y + patch[2].ase_texcoord * bary.z;
+				#if defined(ASE_PHONG_TESSELLATION)
+				float3 pp[3];
+				for (int i = 0; i < 3; ++i)
+					pp[i] = o.vertex.xyz - patch[i].ase_normal * (dot(o.vertex.xyz, patch[i].ase_normal) - dot(patch[i].vertex.xyz, patch[i].ase_normal));
+				float phongStrength = _TessPhongStrength;
+				o.vertex.xyz = phongStrength * (pp[0]*bary.x + pp[1]*bary.y + pp[2]*bary.z) + (1.0f-phongStrength) * o.vertex.xyz;
+				#endif
+				UNITY_TRANSFER_INSTANCE_ID(patch[0], o);
+				return VertexFunction(o);
+			}
+			#else
+			VertexOutput vert ( VertexInput v )
+			{
+				return VertexFunction( v );
+			}
+			#endif
 
-                // Returns the amount of lights affecting the object being renderer.
-                // These lights are culled per-object in the forward renderer
-                int additionalLightsCount = GetAdditionalLightsCount();
-                for (int i = 0; i < additionalLightsCount; ++i)
-                {
-                    // Similar to GetMainLight, but it takes a for-loop index. This figures out the
-                    // per-object light index and samples the light buffer accordingly to initialized the
-                    // Light struct. If _ADDITIONAL_LIGHT_SHADOWS is defined it will also compute shadows.
-                    Light light = GetAdditionalLight(i, positionWS);
+			half4 frag ( VertexOutput IN  ) : SV_Target
+			{
+				UNITY_SETUP_INSTANCE_ID( IN );
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX( IN );
 
-                    // Same functions used to shade the main light.
-                    color += LightingPhysicallyBased(brdfData, light, normalWS, viewDirectionWS);
-                }
-#endif
-                // Emission
-                color += surfaceData.emission;
+				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+					float3 WorldPosition = IN.worldPos;
+				#endif
 
-                float fogFactor = input.positionWSAndFogFactor.w;
+				float4 ShadowCoords = float4( 0, 0, 0, 0 );
 
-                // Mix the pixel color with fogColor. You can optionaly use MixFogColor to override the fogColor
-                // with a custom one.
-                color = MixFog(color, fogFactor);
-                return half4(color, surfaceData.alpha);
-            }
-            ENDHLSL
-        }
+				#if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+					#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
+						ShadowCoords = IN.shadowCoord;
+					#elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
+						ShadowCoords = TransformWorldToShadowCoord( WorldPosition );
+					#endif
+				#endif
 
-        // Used for rendering shadowmaps
-        UsePass "Universal Render Pipeline/Lit/ShadowCaster"
+				float2 texCoord10 = IN.ase_texcoord3.xy * float2( 1,1 ) + float2( 0,0 );
+				
+				float3 BakedAlbedo = 0;
+				float3 BakedEmission = 0;
+				float3 Color = float3( texCoord10 ,  0.0 );
+				float Alpha = 1;
+				float AlphaClipThreshold = 0.5;
+				float AlphaClipThresholdShadow = 0.5;
 
-        // Used for depth prepass
-        // If shadows cascade are enabled we need to perform a depth prepass. 
-        // We also need to use a depth prepass in some cases camera require depth texture
-        // (e.g, MSAA is enabled and we can't resolve with Texture2DMS
-        UsePass "Universal Render Pipeline/Lit/DepthOnly"
+				#ifdef _ALPHATEST_ON
+					clip( Alpha - AlphaClipThreshold );
+				#endif
 
-        // Used for Baking GI. This pass is stripped from build.
-        UsePass "Universal Render Pipeline/Lit/Meta"
-    }
+				#if defined(_DBUFFER)
+					ApplyDecalToBaseColor(IN.clipPos, Color);
+				#endif
 
-    // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
-    // same properties.
-    CustomEditor "UnityEditor.Rendering.Universal.ShaderGUI.LitShader"
+				#if defined(_ALPHAPREMULTIPLY_ON)
+				Color *= Alpha;
+				#endif
+
+				#ifdef LOD_FADE_CROSSFADE
+					LODDitheringTransition( IN.clipPos.xyz, unity_LODFade.x );
+				#endif
+
+				#ifdef ASE_FOG
+					Color = MixFog( Color, IN.fogFactor );
+				#endif
+
+				return half4( Color, Alpha );
+			}
+			ENDHLSL
+		}
+
+		
+		Pass
+		{
+			
+			Name "DepthOnly"
+			Tags { "LightMode"="DepthOnly" }
+
+			ZWrite On
+			ColorMask 0
+			AlphaToMask Off
+
+			HLSLPROGRAM
+
+			#define _RECEIVE_SHADOWS_OFF 1
+			#define ASE_SRP_VERSION 120107
+
+
+			#pragma vertex vert
+			#pragma fragment frag
+
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+
+			
+
+			struct VertexInput
+			{
+				float4 vertex : POSITION;
+				float3 ase_normal : NORMAL;
+				
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+			};
+
+			struct VertexOutput
+			{
+				float4 clipPos : SV_POSITION;
+				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+				float3 worldPos : TEXCOORD0;
+				#endif
+				#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+				float4 shadowCoord : TEXCOORD1;
+				#endif
+				
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+				UNITY_VERTEX_OUTPUT_STEREO
+			};
+
+			CBUFFER_START(UnityPerMaterial)
+						#ifdef ASE_TESSELLATION
+				float _TessPhongStrength;
+				float _TessValue;
+				float _TessMin;
+				float _TessMax;
+				float _TessEdgeLength;
+				float _TessMaxDisp;
+			#endif
+			CBUFFER_END
+
+			
+
+			
+			VertexOutput VertexFunction( VertexInput v  )
+			{
+				VertexOutput o = (VertexOutput)0;
+				UNITY_SETUP_INSTANCE_ID(v);
+				UNITY_TRANSFER_INSTANCE_ID(v, o);
+				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+				
+
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+					float3 defaultVertexValue = v.vertex.xyz;
+				#else
+					float3 defaultVertexValue = float3(0, 0, 0);
+				#endif
+
+				float3 vertexValue = defaultVertexValue;
+
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+					v.vertex.xyz = vertexValue;
+				#else
+					v.vertex.xyz += vertexValue;
+				#endif
+
+				v.ase_normal = v.ase_normal;
+
+				float3 positionWS = TransformObjectToWorld( v.vertex.xyz );
+
+				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+					o.worldPos = positionWS;
+				#endif
+
+				o.clipPos = TransformWorldToHClip( positionWS );
+				#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+					VertexPositionInputs vertexInput = (VertexPositionInputs)0;
+					vertexInput.positionWS = positionWS;
+					vertexInput.positionCS = o.clipPos;
+					o.shadowCoord = GetShadowCoord( vertexInput );
+				#endif
+
+				return o;
+			}
+
+			#if defined(ASE_TESSELLATION)
+			struct VertexControl
+			{
+				float4 vertex : INTERNALTESSPOS;
+				float3 ase_normal : NORMAL;
+				
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+			};
+
+			struct TessellationFactors
+			{
+				float edge[3] : SV_TessFactor;
+				float inside : SV_InsideTessFactor;
+			};
+
+			VertexControl vert ( VertexInput v )
+			{
+				VertexControl o;
+				UNITY_SETUP_INSTANCE_ID(v);
+				UNITY_TRANSFER_INSTANCE_ID(v, o);
+				o.vertex = v.vertex;
+				o.ase_normal = v.ase_normal;
+				
+				return o;
+			}
+
+			TessellationFactors TessellationFunction (InputPatch<VertexControl,3> v)
+			{
+				TessellationFactors o;
+				float4 tf = 1;
+				float tessValue = _TessValue; float tessMin = _TessMin; float tessMax = _TessMax;
+				float edgeLength = _TessEdgeLength; float tessMaxDisp = _TessMaxDisp;
+				#if defined(ASE_FIXED_TESSELLATION)
+				tf = FixedTess( tessValue );
+				#elif defined(ASE_DISTANCE_TESSELLATION)
+				tf = DistanceBasedTess(v[0].vertex, v[1].vertex, v[2].vertex, tessValue, tessMin, tessMax, GetObjectToWorldMatrix(), _WorldSpaceCameraPos );
+				#elif defined(ASE_LENGTH_TESSELLATION)
+				tf = EdgeLengthBasedTess(v[0].vertex, v[1].vertex, v[2].vertex, edgeLength, GetObjectToWorldMatrix(), _WorldSpaceCameraPos, _ScreenParams );
+				#elif defined(ASE_LENGTH_CULL_TESSELLATION)
+				tf = EdgeLengthBasedTessCull(v[0].vertex, v[1].vertex, v[2].vertex, edgeLength, tessMaxDisp, GetObjectToWorldMatrix(), _WorldSpaceCameraPos, _ScreenParams, unity_CameraWorldClipPlanes );
+				#endif
+				o.edge[0] = tf.x; o.edge[1] = tf.y; o.edge[2] = tf.z; o.inside = tf.w;
+				return o;
+			}
+
+			[domain("tri")]
+			[partitioning("fractional_odd")]
+			[outputtopology("triangle_cw")]
+			[patchconstantfunc("TessellationFunction")]
+			[outputcontrolpoints(3)]
+			VertexControl HullFunction(InputPatch<VertexControl, 3> patch, uint id : SV_OutputControlPointID)
+			{
+			   return patch[id];
+			}
+
+			[domain("tri")]
+			VertexOutput DomainFunction(TessellationFactors factors, OutputPatch<VertexControl, 3> patch, float3 bary : SV_DomainLocation)
+			{
+				VertexInput o = (VertexInput) 0;
+				o.vertex = patch[0].vertex * bary.x + patch[1].vertex * bary.y + patch[2].vertex * bary.z;
+				o.ase_normal = patch[0].ase_normal * bary.x + patch[1].ase_normal * bary.y + patch[2].ase_normal * bary.z;
+				
+				#if defined(ASE_PHONG_TESSELLATION)
+				float3 pp[3];
+				for (int i = 0; i < 3; ++i)
+					pp[i] = o.vertex.xyz - patch[i].ase_normal * (dot(o.vertex.xyz, patch[i].ase_normal) - dot(patch[i].vertex.xyz, patch[i].ase_normal));
+				float phongStrength = _TessPhongStrength;
+				o.vertex.xyz = phongStrength * (pp[0]*bary.x + pp[1]*bary.y + pp[2]*bary.z) + (1.0f-phongStrength) * o.vertex.xyz;
+				#endif
+				UNITY_TRANSFER_INSTANCE_ID(patch[0], o);
+				return VertexFunction(o);
+			}
+			#else
+			VertexOutput vert ( VertexInput v )
+			{
+				return VertexFunction( v );
+			}
+			#endif
+
+			half4 frag(VertexOutput IN  ) : SV_TARGET
+			{
+				UNITY_SETUP_INSTANCE_ID(IN);
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX( IN );
+
+				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+					float3 WorldPosition = IN.worldPos;
+				#endif
+
+				float4 ShadowCoords = float4( 0, 0, 0, 0 );
+
+				#if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+					#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
+						ShadowCoords = IN.shadowCoord;
+					#elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
+						ShadowCoords = TransformWorldToShadowCoord( WorldPosition );
+					#endif
+				#endif
+
+				
+
+				float Alpha = 1;
+				float AlphaClipThreshold = 0.5;
+
+				#ifdef _ALPHATEST_ON
+					clip(Alpha - AlphaClipThreshold);
+				#endif
+
+				#ifdef LOD_FADE_CROSSFADE
+					LODDitheringTransition( IN.clipPos.xyz, unity_LODFade.x );
+				#endif
+				return 0;
+			}
+			ENDHLSL
+		}
+
+		Pass
+		{
+			
+            Name "DepthNormals"
+            Tags { "LightMode"="DepthNormalsOnly" }
+
+			ZTest LEqual
+			ZWrite On
+
+
+			HLSLPROGRAM
+
+			#define _RECEIVE_SHADOWS_OFF 1
+			#define ASE_SRP_VERSION 120107
+
+
+			#pragma vertex vert
+			#pragma fragment frag
+
+			#define ATTRIBUTES_NEED_NORMAL
+			#define ATTRIBUTES_NEED_TANGENT
+			#define VARYINGS_NEED_NORMAL_WS
+
+			#define SHADERPASS SHADERPASS_DEPTHNORMALSONLY
+
+			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Texture.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/TextureStack.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
+
+			
+
+			struct VertexInput
+			{
+				float4 vertex : POSITION;
+				float3 ase_normal : NORMAL;
+				
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+			};
+
+			struct VertexOutput
+			{
+				float4 clipPos : SV_POSITION;
+				float3 normalWS : TEXCOORD0;
+				
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+				UNITY_VERTEX_OUTPUT_STEREO
+			};
+
+			CBUFFER_START(UnityPerMaterial)
+						#ifdef ASE_TESSELLATION
+				float _TessPhongStrength;
+				float _TessValue;
+				float _TessMin;
+				float _TessMax;
+				float _TessEdgeLength;
+				float _TessMaxDisp;
+			#endif
+			CBUFFER_END
+
+			
+
+			
+			struct SurfaceDescription
+			{
+				float Alpha;
+				float AlphaClipThreshold;
+			};
+
+			VertexOutput VertexFunction(VertexInput v  )
+			{
+				VertexOutput o;
+				ZERO_INITIALIZE(VertexOutput, o);
+
+				UNITY_SETUP_INSTANCE_ID(v);
+				UNITY_TRANSFER_INSTANCE_ID(v, o);
+				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+				
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+					float3 defaultVertexValue = v.vertex.xyz;
+				#else
+					float3 defaultVertexValue = float3(0, 0, 0);
+				#endif
+
+				float3 vertexValue = defaultVertexValue;
+
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+					v.vertex.xyz = vertexValue;
+				#else
+					v.vertex.xyz += vertexValue;
+				#endif
+
+				v.ase_normal = v.ase_normal;
+
+				float3 positionWS = TransformObjectToWorld( v.vertex.xyz );
+				float3 normalWS = TransformObjectToWorldNormal(v.ase_normal);
+
+				o.clipPos = TransformWorldToHClip(positionWS);
+				o.normalWS.xyz =  normalWS;
+
+				return o;
+			}
+
+			#if defined(ASE_TESSELLATION)
+			struct VertexControl
+			{
+				float4 vertex : INTERNALTESSPOS;
+				float3 ase_normal : NORMAL;
+				
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+			};
+
+			struct TessellationFactors
+			{
+				float edge[3] : SV_TessFactor;
+				float inside : SV_InsideTessFactor;
+			};
+
+			VertexControl vert ( VertexInput v )
+			{
+				VertexControl o;
+				UNITY_SETUP_INSTANCE_ID(v);
+				UNITY_TRANSFER_INSTANCE_ID(v, o);
+				o.vertex = v.vertex;
+				o.ase_normal = v.ase_normal;
+				
+				return o;
+			}
+
+			TessellationFactors TessellationFunction (InputPatch<VertexControl,3> v)
+			{
+				TessellationFactors o;
+				float4 tf = 1;
+				float tessValue = _TessValue; float tessMin = _TessMin; float tessMax = _TessMax;
+				float edgeLength = _TessEdgeLength; float tessMaxDisp = _TessMaxDisp;
+				#if defined(ASE_FIXED_TESSELLATION)
+				tf = FixedTess( tessValue );
+				#elif defined(ASE_DISTANCE_TESSELLATION)
+				tf = DistanceBasedTess(v[0].vertex, v[1].vertex, v[2].vertex, tessValue, tessMin, tessMax, GetObjectToWorldMatrix(), _WorldSpaceCameraPos );
+				#elif defined(ASE_LENGTH_TESSELLATION)
+				tf = EdgeLengthBasedTess(v[0].vertex, v[1].vertex, v[2].vertex, edgeLength, GetObjectToWorldMatrix(), _WorldSpaceCameraPos, _ScreenParams );
+				#elif defined(ASE_LENGTH_CULL_TESSELLATION)
+				tf = EdgeLengthBasedTessCull(v[0].vertex, v[1].vertex, v[2].vertex, edgeLength, tessMaxDisp, GetObjectToWorldMatrix(), _WorldSpaceCameraPos, _ScreenParams, unity_CameraWorldClipPlanes );
+				#endif
+				o.edge[0] = tf.x; o.edge[1] = tf.y; o.edge[2] = tf.z; o.inside = tf.w;
+				return o;
+			}
+
+			[domain("tri")]
+			[partitioning("fractional_odd")]
+			[outputtopology("triangle_cw")]
+			[patchconstantfunc("TessellationFunction")]
+			[outputcontrolpoints(3)]
+			VertexControl HullFunction(InputPatch<VertexControl, 3> patch, uint id : SV_OutputControlPointID)
+			{
+				return patch[id];
+			}
+
+			[domain("tri")]
+			VertexOutput DomainFunction(TessellationFactors factors, OutputPatch<VertexControl, 3> patch, float3 bary : SV_DomainLocation)
+			{
+				VertexInput o = (VertexInput) 0;
+				o.vertex = patch[0].vertex * bary.x + patch[1].vertex * bary.y + patch[2].vertex * bary.z;
+				o.ase_normal = patch[0].ase_normal * bary.x + patch[1].ase_normal * bary.y + patch[2].ase_normal * bary.z;
+				
+				#if defined(ASE_PHONG_TESSELLATION)
+				float3 pp[3];
+				for (int i = 0; i < 3; ++i)
+					pp[i] = o.vertex.xyz - patch[i].ase_normal * (dot(o.vertex.xyz, patch[i].ase_normal) - dot(patch[i].vertex.xyz, patch[i].ase_normal));
+				float phongStrength = _TessPhongStrength;
+				o.vertex.xyz = phongStrength * (pp[0]*bary.x + pp[1]*bary.y + pp[2]*bary.z) + (1.0f-phongStrength) * o.vertex.xyz;
+				#endif
+				UNITY_TRANSFER_INSTANCE_ID(patch[0], o);
+				return VertexFunction(o);
+			}
+			#else
+			VertexOutput vert ( VertexInput v )
+			{
+				return VertexFunction( v );
+			}
+			#endif
+
+			half4 frag(VertexOutput IN ) : SV_TARGET
+			{
+				SurfaceDescription surfaceDescription = (SurfaceDescription)0;
+
+				
+
+				surfaceDescription.Alpha = 1;
+				surfaceDescription.AlphaClipThreshold = 0.5;
+
+				#if _ALPHATEST_ON
+					clip(surfaceDescription.Alpha - surfaceDescription.AlphaClipThreshold);
+				#endif
+
+				#ifdef LOD_FADE_CROSSFADE
+					LODDitheringTransition( IN.clipPos.xyz, unity_LODFade.x );
+				#endif
+
+				float3 normalWS = IN.normalWS;
+
+				return half4(NormalizeNormalPerPixel(normalWS), 0.0);
+			}
+
+			ENDHLSL
+		}
+
+		
+	}
+	
+	CustomEditor "UnityEditor.ShaderGraphUnlitGUI"
+	FallBack "Hidden/Shader Graph/FallbackError"
+	
+	Fallback Off
 }
