@@ -76,6 +76,7 @@ Shader "Unlit/JoeyTA101PBR"
             float4 _Emission;
 
             #define PI 3.141592654
+            #define Eplison 0.001
 
             //D
             float D_DistributionGGX(float3 N, float3 H, float Roughness)
@@ -89,7 +90,7 @@ Shader "Unlit/JoeyTA101PBR"
                 float denominator = (NH2 * (a2 - 1.0) + 1.0);
                 denominator = PI * denominator * denominator;
 
-                return nominator / max(denominator, 0.0000001); //防止分母为0
+                return nominator / max(denominator, Eplison); //防止分母为0
                 // return              nominator/ (denominator) ;//防止分母为0
             }
 
@@ -101,7 +102,7 @@ Shader "Unlit/JoeyTA101PBR"
                 float nominator = NV;
                 float denominator = k + (1.0 - k) * NV;
                 // return nominator/ max(denominator,0.001) ;//防止分母为0
-                return nominator / max(denominator, 0.0000001); //防止分母为0
+                return nominator / max(denominator, Eplison); //防止分母为0
             }
 
             float G_GeometrySmith(float3 N, float3 V, float3 L, float Roughness)
