@@ -23,6 +23,10 @@ Shader "Unlit/JoeyTA101PBR"
         _NormalTex ("_NormalTex", 2D) = "bump" {}
         _AOTex ("_AOTex", 2D) = "white" {}
         
+        [Space(10)]
+        [Toggle(ENABLE_BRDF_LUT)]_EnableBrdfLut("Enable BrdfLut",Float) = 0
+        _BRDFLut("BRDFLut",2D) = "black"{}
+        
     }
     SubShader
     {
@@ -36,7 +40,7 @@ Shader "Unlit/JoeyTA101PBR"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-
+            #pragma shader_feature _ ENABLE_BRDF_LUT
 
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
@@ -49,15 +53,17 @@ Shader "Unlit/JoeyTA101PBR"
                 float4 tangent :TANGENT;
                 float3 normal : NORMAL;
             };
-
+            
             struct v2f
             {
-                float4 vertex : SV_POSITION;
-                float2 uv : TEXCOORD0;
-                float3 tangent : TEXCOORD1;
-                float3 normal : TEXCOORD3;
+                float4 vertex       : SV_POSITION;
+                float2 uv           : TEXCOORD0;
+                float3 tangent      : TEXCOORD1;
+                float3 bitangent    : TEXCOORD2; 
+                float3 normal       : TEXCOORD3; 
                 float3 worldPosition: TEXCOORD4;
                 float3 localPostion : TEXCOORD5;
+                float debug         : TEXCOORD6;
             };
 
             sampler2D _MainTex;
@@ -70,6 +76,7 @@ Shader "Unlit/JoeyTA101PBR"
 
             sampler2D _BaseColorTex, _MetallicTex, _RoughnessTex;
             sampler2D _EmissionTex, _AOTex, _NormalTex;
+            sampler2D _BRDFLut;
 
 
             float _EnableBaseColor,_EnableRoughness,_EnableMetallic,_EnableEmission;
@@ -173,15 +180,18 @@ Shader "Unlit/JoeyTA101PBR"
                 return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
             }
 
-            v2f vert(appdata v)
+            v2f vert (appdata v)
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
                 o.normal = UnityObjectToWorldNormal(v.normal);
-                o.worldPosition = mul(unity_ObjectToWorld, v.vertex);
+                o.worldPosition = mul(unity_ObjectToWorld,v.vertex);
                 o.localPostion = v.vertex.xyz;
-                o.tangent = UnityObjectToWorldDir(v.tangent)* v.tangent.w;
+                o.tangent = UnityObjectToWorldNormal(v.tangent);
+                //Unity引擎的问题，必须这么写 乘以 v.tangent.w
+                o.bitangent = cross(o.normal,o.tangent) * v.tangent.w;
+                o.debug = v.tangent.w;
                 return o;
             }
 
@@ -190,8 +200,7 @@ Shader "Unlit/JoeyTA101PBR"
                 //Variable
                 float3 T = normalize(i.tangent);
                 float3 N = normalize(i.normal);
-                float3 B = normalize(cross(N, T));
-                // float3 B = normalize( i.bitangent);
+                float3 B = normalize( i.bitangent);
                 float3 L = normalize(UnityWorldSpaceLightDir(i.worldPosition.xyz));
                 float3 V = normalize(UnityWorldSpaceViewDir(i.worldPosition.xyz));
                 float3 H = normalize(V + L);
@@ -225,7 +234,6 @@ Shader "Unlit/JoeyTA101PBR"
                 if(_EnableMetallic) Metallic= _Metallic;
                 if(_EnableEmission) Emission= _Emission;
 
-
                 float3 F0 = lerp(0.04, BaseColor, Metallic);
                 float3 Radiance = _LightColor0.xyz;
 
@@ -237,7 +245,7 @@ Shader "Unlit/JoeyTA101PBR"
                 float NL = max(dot(N, L), 0);
 
                 float D = D_DistributionGGX(N, H, Roughness);
-                float3 F = F_FrenelSchlick(NV, F0);
+                float3 F = F_FrenelSchlick(HV, F0);
                 float G = G_GeometrySmith(N, V, L, Roughness);
 
                 float3 KS = F;
@@ -269,10 +277,14 @@ Shader "Unlit/JoeyTA101PBR"
                 //间接光镜面反射采样的预过滤环境贴图
                 float3 EnvSpecularPrefilted = DecodeHDR(rgb_mip, unity_SpecCube0_HDR);
 
-
-                //数值近似
-                float2 env_brdf = EnvBRDFApprox(Roughness, NV);
-
+                #ifdef ENABLE_BRDF_LUT
+                    //LUT采样
+                    float2 env_brdf = tex2D(_BRDFLut, float2(lerp(0, 0.99, NV), lerp(0, 0.99, Roughness))).rg;
+                #else
+                    //数值近似
+                    float2 env_brdf = EnvBRDFApprox(Roughness, NV);
+                #endif
+                
                 float3 Specular_Indirect = EnvSpecularPrefilted * (F_IndirectLight * env_brdf.r + env_brdf.g);
 
                 //Diffuse           
