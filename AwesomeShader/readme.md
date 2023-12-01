@@ -1269,7 +1269,8 @@ Examples:
 
 * Andrew Baldwin <http://thndl.com/?15>
 
-  ## Voronoi3D 
+  ## Voronoi3D
+  ```
   float hash(float x) { return frac(x + 1.3215 * 1.8152); }
 float hash3(float3 a) { return frac((hash(a.z * 42.8883) + hash(a.y * 36.9125) + hash(a.x * 65.4321)) * 291.1257); }
 
@@ -1308,3 +1309,4 @@ float2 Voronoi3D(float3 xyz)
     }
     return float2(m, w);
 }
+```
